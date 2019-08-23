@@ -1,0 +1,19 @@
+{
+  meta={code=200, requestId=5d603bcea1979300381a240e},
+  response={
+    venues=[
+      {// 0
+        hasPerk=false, referralId=v-1566587854, name=MOD Pizza, location={
+          cc=US, country=United States, address=140 Vintage Way, labeledLatLngs=[{
+            lng=-122.555288, label=display, lat=38.090721}],
+          lng=-122.555288, distance=20, formattedAddress=[140 Vintage Way, Novato, CA 94945, United States], city=Novato, postalCode=94945, state=CA, lat=38.090721},
+        id=5a5d2c6be679bc7b2fad20d9, categories=[
+          {
+            pluralName=Pizza Places, name=Pizza Place, icon={
+              prefix="https://ss3.4sqi.net/img/categories_v2/food/pizza_", suffix=.png},
+            id=4bf58dd8d48988d1ca941735, shortName=Pizza, primary=true}
+        ]
+      }
+    ]
+  }
+}

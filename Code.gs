@@ -2,7 +2,9 @@ var key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
 var searchRadius = 50000;
 var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
-
+var foursquareClientId = "VGOXMO5JN5KMAEA30G1ZXZPZULAIPQ2MG3WS3NRHS2E52YYE";
+var foursquareClientSecret = "HF4AHPPFI1BCFNEXNSZ1D1Q2ZDF1FCDCQGTFDBELRTTXCB0A";
+var foursquareCredentials = "client_id=" + foursquareClientId + "&client_secret=" + foursquareClientSecret + "&v=20190505&";
 //DIRECTIONS API
 var directionsRequest = "https://maps.googleapis.com/maps/api/directions/json?key="+key+"&";// + Parameters
 /* Required Parameters
@@ -42,6 +44,12 @@ Opennow: True/False
 Type: Supported type, see https://developers.google.com/places/web-service/supported_types
 */
 
+// Foursquare Venue Details Request
+var foursquareDetailsRequest = "https://api.foursquare.com/v2/venues/XXIDXX?" + foursquareCredentials;
+
+// Foursquare Venue Search Search Request
+var foursquareVenueSearch = "https://api.foursquare.com/v2/venues/search?" + foursquareCredentials;
+
 //Snap to Road
 var snapRequest = "https://roads.googleapis.com/v1/snapToRoads?key=" + key +"&path="; // + Points  lat,lng|lat,lng
 
@@ -55,29 +63,38 @@ function nearbySearch(coordinates,keywords,type){
 
 function testNearby(){
   var test = nearbySearch("37.811410,-122.238268","pizza","restaurant");
-  //Logger.log(test.results);
   return test.results;
 }
 
+// JSON ---> {Name: {Ratings:float,User_ratings_total: int, price_level: int, place_id: String}}
+function getPlaceInfo(place){
+  var temp = {};
+  temp.rating = (place.rating);
+  temp.user_ratings_total = (place.user_ratings_total);
+  temp.price_level = (place.price_level);
+  temp.place_id = (place.place_id);
+  temp.location = (place.geometry.location);
+  temp.name = place.name;
+  return temp;
+  }
+
 // Place[] ---> {Name: {Ratings:float,User_ratings_total: int, price_level: int, place_id: String}}
 // Take a place result array and return a Dictionary with summary info about the place
-function getPlaceInfo(places){
+function getInfoForAllPlaces(places){
   var dict = {};
   for(var p = 0; p<places.length; p++){
-    var temp = {};
-    temp.rating = (places[p].rating);
-    temp.user_ratings_total = (places[p].user_ratings_total);
-    temp.price_level = (places[p].price_level);
-    temp.place_id = (places[p].place_id);
-    temp.location = (places[p].geometry.location);
-    dict[places[p].name] = temp;
+    dict[places[p].name] = getPlaceInfo(places[p]);
   }
   return dict;
 }
 
 function testPlaceInfo(){
-  var test = getPlaceInfo(testNearby());
-  Logger.log(test);
+  var test = [];
+  var nearby = testNearby();
+  test.push(getPlaceInfo(nearby[0]));
+  test.push(getPlaceInfo(nearby[1]));
+  test.push(getPlaceInfo(nearby[2]));
+  return test;
 }
 
 //Location Location ---> Route(JSON)
@@ -118,7 +135,7 @@ function getAllSearchCoordinates(start, end){
   return coordinates;
 }
 
-function testSearch(){
+function testSearchCoordinates(){
   var test = getAllSearchCoordinates("Oakland,CA","Vancouver, BC");
   return test;
 }
@@ -165,7 +182,7 @@ function searchAlongRoute(points, search){
 
 function testSearchAlongRoute(){
   var search = createSearch(["huckleberry"],"");
-  var test = searchAlongRoute(testSearch(),search);
+  var test = searchAlongRoute(testSearchCoordinates(),search);
   return test;
 }
 
@@ -178,21 +195,12 @@ function createSearch(keywords,type){
   return search;
 }
 
-// [ Location ] ---> Route
-// Find the route connecting a list of locations
-function getRoute(stops){
-  /*route = null;
-  for(stop = 1; stop < stops.length; stop++){
-    route = route + getABRoute(stops[stop-1],stops[stop]);
-  }*/
-}
-
 // Searches[] ---> JSON
 //Takes a list of JSON search results and returns basic info of all results
-function getInfoAlongRoute(results){
+function getResultsInfo(results){
   var places = {};
   for(var i = 0; i<results.length;i++){
-    var temp = getPlaceInfo(results[i].results);
+    var temp = getInfoForAllPlaces(results[i].results);
     for(var p in temp){
       places[p] = temp[p];
     }
@@ -200,8 +208,8 @@ function getInfoAlongRoute(results){
   return places;
 }
 
-function testGetAlongRoute(){
-  var test = getInfoAlongRoute(testSearchAlongRoute());
+function testResultsInfo(){
+  var test = getResultsInfo(testSearchAlongRoute());
   return test;
 }
 
@@ -221,10 +229,45 @@ function dumpInfoToSheet(info){
 }
 
 function testDump(){
-  dumpInfoToSheet(testGetAlongRoute());
+  dumpInfoToSheet(testResultsInfo());
 }
 
 function tester(){
   //Logger.log(testSearchAlongRoute());
-  Logger.log(testGetAlongRoute());
+  Logger.log(filterResultsByRating(getResultsInfo(testSearchAlongRoute())));
+}
+
+// JSON ---> JSON
+// Filter out results with low ratings and review counts
+function filterResultsByRating(results){
+  temp = {}
+  for(var r in results){
+    if(results[r].user_ratings_total > 10){
+      if(results[r].rating >= 4.5){
+        temp[r] = results[r];
+  }}}
+  return temp;
+}
+
+// JSON ---> String
+// Gets the Foursquare ID of a place from google search results
+function getFoursquareId(place){
+  var name = place.name;
+  var lat = place.location.lat;
+  var lng = place.location.lng;
+  var intent = "match";
+  var url = foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent;
+  var response = UrlFetchApp.fetch(foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent);
+  var fPlace = JSON.parse(response.getContentText());
+  return fPlace.response.venues[0].id;
+
+
+}
+
+function testFsId(){
+  var test = testPlaceInfo();
+  Logger.log(test[0]);
+  Logger.log(getFoursquareId(test[0]));
+  Logger.log(getFoursquareId(test[1]));
+  Logger.log(getFoursquareId(test[2]));
 }
