@@ -260,14 +260,24 @@ function getFoursquareId(place){
   var response = UrlFetchApp.fetch(foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent);
   var fPlace = JSON.parse(response.getContentText());
   return fPlace.response.venues[0].id;
-
-
 }
 
 function testFsId(){
   var test = testPlaceInfo();
-  Logger.log(test[0]);
-  Logger.log(getFoursquareId(test[0]));
-  Logger.log(getFoursquareId(test[1]));
-  Logger.log(getFoursquareId(test[2]));
+  var result = getFoursquareId(test[0]);
+  Logger.log(result);
+  return result;
+}
+
+function getFoursquareDetails(id){
+  var url = foursquareDetailsRequest.replace('XXIDXX',id);
+  var response = UrlFetchApp.fetch(url);
+  var details = JSON.parse(response.getContentText());
+  return details;
+}
+
+function testDetails(){
+  var test = getFoursquareDetails(testFsId());
+  Logger.log(test);
+  return test
 }
