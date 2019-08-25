@@ -101,7 +101,10 @@ var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 // Get atmosphere info for a place from google by its name and nearby lat long
 function googleRatingsByNameAndLocation(name, location){
   var url = placeSearchRequest + "input=" + name + "&inputtype=textquery&location=" + location;
+
+  // API CALL
   var response = UrlFetchApp.fetch(url);
+
   var json = JSON.parse(response.getContentText());
   var temp = {};
   var details = json.candidates[0];
@@ -123,7 +126,10 @@ function testGoogleRatingsByNameAndLocation(){
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
 function nearbySearch(coordinates,keywords,type){
   var url = nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type;
+
+  // API CALL
   var response = JSON.parse(UrlFetchApp.fetch(url).getContentText());
+
   return response;
 }
 
@@ -167,7 +173,10 @@ function testPlaceInfo(){
 //Take two locations, A,B, and find the route from A to B
 function getABRoute(start,end) {
   var url = directionsRequest+"origin="+start+"&destination="+end;
+
+  // API CALL
   var response = UrlFetchApp.fetch(url).getContentText();
+
   return JSON.parse(response);
 }
 
@@ -323,7 +332,10 @@ function getFoursquareId(place){
   var lng = place.location.lng;
   var intent = "match";
   var url = foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent;
+
+  // API CALL
   var response = UrlFetchApp.fetch(url);
+
   var fPlace = JSON.parse(response.getContentText());
   return fPlace.response.venues[0].id;
 }
@@ -336,7 +348,10 @@ function testFsId(){
 
 function getFoursquareDetails(id){
   var url = foursquareDetailsRequest.replace('XXIDXX',id);
+
+  // API CALL
   var response = UrlFetchApp.fetch(url);
+
   var details = JSON.parse(response.getContentText());
   return details;
 }
@@ -392,7 +407,10 @@ function yelpIDByNameAndAddress(name, address){
   url += "&country=" + loc.country;
   var authHeader = "Bearer " + yelp_key;
   var options = {headers: {Authorization: authHeader}}
+
+  // API CALL
   var response = UrlFetchApp.fetch(url, options);
+
   var info = JSON.parse(response.getContentText());
   return info.businesses[0].id;
 }
@@ -409,7 +427,10 @@ function testYelpIDByNameAndAddress(){
 // Take a google place ID and return the formatted address of the place
 function getFormattedAddressByID(id){
   var url = placeAddressRequest + id;
+
+  // API CALL
   var response = UrlFetchApp.fetch(url);
+
   var json = JSON.parse(response.getContentText());
   return json.result.formatted_address;
 }
@@ -424,23 +445,28 @@ function testAddressByID(){
 
 // String ---> {name:str, price:int(1-4), rating:float(1-5), review_count:int}
 // Return price and rating info from yelp by a yelp id
-function getYelpRating(id){
+function yelpRatingByID(id){
+  // API URL
   var url = yelpDetailsRequest + id;
   var authHeader = "Bearer " + yelp_key;
   var options = {headers: {Authorization: authHeader}}
+
+  // API CALL
   var response = UrlFetchApp.fetch(url, options);
+
   var info = JSON.parse(response.getContentText());
   temp = {};
   temp.name = info.name;
   temp.price = info.price.length;
   temp.rating = info.rating;
-  temp.review_count = info.review_count;
+  temp.rating_count = info.review_count;
+  temp.id = id;
   return temp;
 }
 
-function testYelpRating(){
+function testYelpRatingByID(){
   var id = testyelpIDByNameAndAddress();
-  var test = getYelpRating(id);
+  var test = yelpRatingByID(id);
   Logger.log(test);
   return test;
 }
