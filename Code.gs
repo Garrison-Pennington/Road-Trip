@@ -324,14 +324,10 @@ function filterResultsByRating(results){
   return temp;
 }
 
-// JSON ---> String
-// Gets the Foursquare ID of a place from google search results
-function getFoursquareId(place){
-  var name = place.name;
-  var lat = place.location.lat;
-  var lng = place.location.lng;
-  var intent = "match";
-  var url = foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent;
+// String String ---> String
+// Gets the Foursquare ID of a place from name and lat,lng
+function foursquareIDbyNameAndLocation(name, location){
+  var url = foursquareVenueSearch + "name=" + name + "&ll=" + location + "&intent=match";
 
   // API CALL
   var response = UrlFetchApp.fetch(url);
@@ -340,10 +336,12 @@ function getFoursquareId(place){
   return fPlace.response.venues[0].id;
 }
 
-function testFsId(){
-  var test = testPlaceInfo();
-  var result = getFoursquareId(test[0]);
-  return [result, test[0]];
+function testFoursquareIDbyNameAndLocation(){
+  var test = testPlaceInfo()[0];
+  var name = test.name;
+  var location = test.location.lat + "," + test.location.lng;
+  var result = foursquareIDbyNameAndLocation(name, location);
+  return [result, test];
 }
 
 function getFoursquareDetails(id){
@@ -357,7 +355,7 @@ function getFoursquareDetails(id){
 }
 
 function testDetails(){
-  id = testFsId()
+  var id = testFoursquareIDbyNameAndLocation();
   var test = getFoursquareDetails(id[0]);
   return [test, id[1]]
 }
@@ -465,7 +463,7 @@ function yelpRatingByID(id){
 }
 
 function testYelpRatingByID(){
-  var id = testyelpIDByNameAndAddress();
+  var id = testYelpIDByNameAndAddress();
   var test = yelpRatingByID(id);
   Logger.log(test);
   return test;
