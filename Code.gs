@@ -1,12 +1,20 @@
-var key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
 var searchRadius = 50000;
 var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
-var foursquareClientId = "VGOXMO5JN5KMAEA30G1ZXZPZULAIPQ2MG3WS3NRHS2E52YYE";
-var foursquareClientSecret = "HF4AHPPFI1BCFNEXNSZ1D1Q2ZDF1FCDCQGTFDBELRTTXCB0A";
-var foursquareCredentials = "client_id=" + foursquareClientId + "&client_secret=" + foursquareClientSecret + "&v=20190505&";
-//DIRECTIONS API
-var directionsRequest = "https://maps.googleapis.com/maps/api/directions/json?key="+key+"&";// + Parameters
+
+
+// *** APIs ***
+// Google Authentication
+var google_project_key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
+// Foursquare Authentication and version
+var foursquareCredentials = "client_id=VGOXMO5JN5KMAEA30G1ZXZPZULAIPQ2MG3WS3NRHS2E52YYE&client_secret=HF4AHPPFI1BCFNEXNSZ1D1Q2ZDF1FCDCQGTFDBELRTTXCB0A&v=20190505&";
+// Yelp Authentication
+var yelp_key = "rBj-CkCKNRMa4bL-mogTgo90v05i1D2OnyWwMQDKA4tJd_hbXt3qgWpDPBtknQAVLBNOnaUCz58uiO6DXTow0aeZDeomeok1OXLA59dbebJknF86TyQoKw_ae4JhXXYx";
+//==========================================================================================================================================
+// DIRECTIONS API
+// URI's
+// Directions Request
+var directionsRequest = "https://maps.googleapis.com/maps/api/directions/json?key="+google_project_key+"&";// + Parameters
 /* Required Parameters
 Origin: One of three
 - Address EX: 24+Sussex+Drive+Ottawa+ON
@@ -29,8 +37,12 @@ Waypoints: Array of
  - Encoded Polyline
 */
 
-//Nearby Search
-var nearbyRequest = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key="+key+"&radius=" +searchRadius +"&";// + Parameters
+//Snap to Road
+var snapRequest = "https://roads.googleapis.com/v1/snapToRoads?key=" + google_project_key +"&path="; // + Points  lat,lng|lat,lng
+//==========================================================================================================================================
+// PLACES API
+// Nearby Search
+var nearbyRequest = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key="+google_project_key+"&radius=" +searchRadius +"&";// + Parameters
 /* Required Parameters
 Location:
  - Latitude,Longitude
@@ -44,14 +56,35 @@ Opennow: True/False
 Type: Supported type, see https://developers.google.com/places/web-service/supported_types
 */
 
+// Details request for address
+var placeAddressRequest = "https://maps.googleapis.com/maps/api/place/details/json?key=" + google_project_key + "&fields=formatted_address" + "&placeid=";
+/* Required Parameters:
+ - key: Applications API key, already included in variable
+ - placeid: Google's unique identifier for a place, parameter already declared, just add the id to the end of the string for a useable URL
+
+ Optional:
+  - fields: which details to be returned, set to formatted address for the scope of the application
+*/
+
+//==========================================================================================================================================
+// FOURSQUARE API
+// URI's
 // Foursquare Venue Details Request
 var foursquareDetailsRequest = "https://api.foursquare.com/v2/venues/XXIDXX?" + foursquareCredentials;
 
 // Foursquare Venue Search Search Request
 var foursquareVenueSearch = "https://api.foursquare.com/v2/venues/search?" + foursquareCredentials;
 
-//Snap to Road
-var snapRequest = "https://roads.googleapis.com/v1/snapToRoads?key=" + key +"&path="; // + Points  lat,lng|lat,lng
+//==========================================================================================================================================
+// YELP API
+// Match Request
+var yelpMatchRequest = "https://api.yelp.com/v3/businesses/matches";
+
+// Details request
+var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
+
+
+
 
 // Location String String ---> JSON
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
@@ -257,7 +290,7 @@ function getFoursquareId(place){
   var lng = place.location.lng;
   var intent = "match";
   var url = foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent;
-  var response = UrlFetchApp.fetch(foursquareVenueSearch + "name=" + name + "&ll=" + lat +"," + lng + "&intent=" + intent);
+  var response = UrlFetchApp.fetch(url);
   var fPlace = JSON.parse(response.getContentText());
   return fPlace.response.venues[0].id;
 }
@@ -265,8 +298,7 @@ function getFoursquareId(place){
 function testFsId(){
   var test = testPlaceInfo();
   var result = getFoursquareId(test[0]);
-  Logger.log(result);
-  return result;
+  return [result, test[0]];
 }
 
 function getFoursquareDetails(id){
@@ -277,7 +309,108 @@ function getFoursquareDetails(id){
 }
 
 function testDetails(){
-  var test = getFoursquareDetails(testFsId());
+  id = testFsId()
+  var test = getFoursquareDetails(id[0]);
+  return [test, id[1]]
+}
+
+// JSON ---> JSON
+// Take foursquare venue details and return an object containing the name, rating details, and price
+function foursquareRating(details){
+  temp = {}
+  temp.name = details.response.venue.name;
+  temp.rating = details.response.venue.rating;
+  temp.ratingSignals = details.response.venue.ratingSignals;
+  temp.price = details.response.venue.price.tier;
+  return temp;
+}
+
+function testFsRating(){
+  var details = testDetails();
+  var result = foursquareRating(details[0]);
+  Logger.log(details[1]);
+  Logger.log(result);
+  return result;
+}
+
+// String ---> {street:str, city:str, state:str, country:str}
+function getLocationInfoFromAddress(formatted){
+  comps = formatted.split(",");
+  for(i = 0; i<comps.length;i++){
+    comps[i] = comps[i].trim();
+  }
+  temp = {};
+  temp.street = comps[0];
+  temp.city = comps[1];
+  temp.state = comps[2].substring(0,2);
+  temp.country = comps[3].substring(0,2);
+  return temp;
+}
+
+// {name:str, address:str} ---> JSON
+// Get yelp business details from a name and address and return the yelpID
+function yelpMatchID(details){
+  var url = yelpMatchRequest + "?";
+  var loc = getLocationInfoFromAddress(details.address);
+  url += "name=" + details.name;
+  url += "&address1=" + loc.street;
+  url += "&city=" + loc.city;
+  url += "&state=" + loc.state;
+  url += "&country=" + loc.country;
+  var authHeader = "Bearer " + yelp_key;
+  var options = {headers: {Authorization: authHeader}}
+  var response = UrlFetchApp.fetch(url, options);
+  var info = JSON.parse(response.getContentText());
+  return info.businesses[0].id;
+}
+
+function testYelpMatchID(){
+  var place = testPlaceInfo()[0];
+  var address = getFormattedAddressByID(place.place_id);
+  details = {};
+  details.name = place.name;
+  details.address = address;
+  var test = yelpMatchID(details);
   Logger.log(test);
-  return test
+  return test;
+}
+
+// String ---> String
+// Take a google place ID and return the formatted address of the place
+function getFormattedAddressByID(id){
+  var url = placeAddressRequest + id;
+  var response = UrlFetchApp.fetch(url);
+  var json = JSON.parse(response.getContentText());
+  return json.result.formatted_address;
+}
+
+function testAddressByID(){
+  var info = testPlaceInfo();
+  //Logger.log(info);
+  var test = getFormattedAddressByID(info[0].place_id);
+  //Logger.log(test);
+  return test;
+}
+
+// String ---> {name:str, price:int(1-4), rating:float(1-5), review_count:int}
+// Return price and rating info from yelp by a yelp id
+function getYelpRating(id){
+  var url = yelpDetailsRequest + id;
+  var authHeader = "Bearer " + yelp_key;
+  var options = {headers: {Authorization: authHeader}}
+  var response = UrlFetchApp.fetch(url, options);
+  var info = JSON.parse(response.getContentText());
+  temp = {};
+  temp.name = info.name;
+  temp.price = info.price.length;
+  temp.rating = info.rating;
+  temp.review_count = info.review_count;
+  return temp;
+}
+
+function testYelpRating(){
+  var id = testYelpMatchID();
+  var test = getYelpRating(id);
+  Logger.log(test);
+  return test;
 }

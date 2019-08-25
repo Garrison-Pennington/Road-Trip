@@ -1,9 +1,19 @@
+// Paths for vars of Interest
+/*
+  rating(float) = response.venue.rating
+  price(int 1-4) = response.venue.price.tier
+  ratingSignals(int) = response.venue.ratingSignals     NUMBER OF RATINGS
+  name(str) = response.venue.name
+*/
+
+
 {
   meta={code=200, requestId=5d6045cabcbf7a002c832038},
   response={
     venue={
       reasons={count=1, items=[{summary=Lots of people like this place, reasonName=rawLikesReason, type=general}]},
-      specials={count=0, items=[]}, dislike=false, shortUrl="http://4sq.com/2ogf3m", rating=9.1,
+      specials={count=0, items=[]}, dislike=false, shortUrl="http://4sq.com/2ogf3m",
+      rating=9.1,
       photos={
         summary=0 photos, count=441,
         groups=[
