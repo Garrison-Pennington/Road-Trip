@@ -380,12 +380,12 @@ function getAddressComponents(formatted){
   return temp;
 }
 
-// {name:str, address:str} ---> JSON
+// String String ---> JSON
 // Get yelp business details from a name and address and return the yelpID
-function yelpMatchID(details){
+function yelpIDByNameAndAddress(name, address){
   var url = yelpMatchRequest + "?";
-  var loc = getAddressComponents(details.address);
-  url += "name=" + details.name;
+  var loc = getAddressComponents(address);
+  url += "name=" + name;
   url += "&address1=" + loc.street;
   url += "&city=" + loc.city;
   url += "&state=" + loc.state;
@@ -397,13 +397,10 @@ function yelpMatchID(details){
   return info.businesses[0].id;
 }
 
-function testYelpMatchID(){
+function testYelpIDByNameAndAddress(){
   var place = testPlaceInfo()[0];
   var address = getFormattedAddressByID(place.place_id);
-  details = {};
-  details.name = place.name;
-  details.address = address;
-  var test = yelpMatchID(details);
+  var test = yelpIDByNameAndAddress(place.name, address);
   Logger.log(test);
   return test;
 }
@@ -442,7 +439,7 @@ function getYelpRating(id){
 }
 
 function testYelpRating(){
-  var id = testYelpMatchID();
+  var id = testyelpIDByNameAndAddress();
   var test = getYelpRating(id);
   Logger.log(test);
   return test;
