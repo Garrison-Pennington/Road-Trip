@@ -97,8 +97,27 @@ var yelpMatchRequest = "https://api.yelp.com/v3/businesses/matches";
 // Details request
 var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 
+// String String ---> {name:{rating:float, rating_count:int, price:int, id:str}}
+// Get atmosphere info for a place from google by its name and nearby lat long
+function googleRatingsByNameAndLocation(name, location){
+  var url = placeSearchRequest + "input=" + name + "&inputtype=textquery&location=" + location;
+  var response = UrlFetchApp.fetch(url);
+  var json = JSON.parse(response.getContentText());
+  var temp = {};
+  var details = json.candidates[0];
+  temp.address = details.formatted_address;
+  temp.rating = details.rating;
+  temp.rating_count = details.user_ratings_total;
+  temp.id = details.place_id;
+  temp.price = details.price_level;
+  return temp;
+}
 
-
+function testGoogleRatingsByNameAndLocation(){
+  var test = googleRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814")
+  Logger.log(test);
+  return test;
+}
 
 // Location String String ---> JSON
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
