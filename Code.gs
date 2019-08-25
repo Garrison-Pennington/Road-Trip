@@ -66,6 +66,20 @@ var placeAddressRequest = "https://maps.googleapis.com/maps/api/place/details/js
   - fields: which details to be returned, set to formatted address for the scope of the application
 */
 
+// Place Search request
+var placeSearchRequest = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?key=" + google_project_key + "&fields=formatted_address,place_id,rating,price_level,user_ratings_total,name&";
+/* Required Parameters:
+  - key: API key, already included in var
+  - input: name, address, phone number etc. to search for
+  - inputtype: one of
+    - textquery
+    - phonenumber (must be in international format)
+
+  Optional:
+  - fields: which fields to return about the place
+  - location: lat,lng
+*/
+
 //==========================================================================================================================================
 // FOURSQUARE API
 // URI's
@@ -334,7 +348,7 @@ function testFsRating(){
 }
 
 // String ---> {street:str, city:str, state:str, country:str}
-function getLocationInfoFromAddress(formatted){
+function getAddressComponents(formatted){
   comps = formatted.split(",");
   for(i = 0; i<comps.length;i++){
     comps[i] = comps[i].trim();
@@ -351,7 +365,7 @@ function getLocationInfoFromAddress(formatted){
 // Get yelp business details from a name and address and return the yelpID
 function yelpMatchID(details){
   var url = yelpMatchRequest + "?";
-  var loc = getLocationInfoFromAddress(details.address);
+  var loc = getAddressComponents(details.address);
   url += "name=" + details.name;
   url += "&address1=" + loc.street;
   url += "&city=" + loc.city;
