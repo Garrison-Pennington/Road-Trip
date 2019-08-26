@@ -366,7 +366,7 @@ function foursquareRatingByDetails(details){
   temp = {}
   temp.name = details.response.venue.name;
   temp.rating = details.response.venue.rating;
-  temp.ratingSignals = details.response.venue.ratingSignals;
+  temp.rating_count = details.response.venue.ratingSignals;
   temp.price = details.response.venue.price.tier;
   temp.id = details.response.venue.id;
   return temp;
@@ -495,6 +495,31 @@ function allRatingsByNameAndLocation(name, location){
 
 function testAllRatingsByNameAndLocation(){
   var test = allRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
-  Logger.log(test);
+  //Logger.log(test);
   return test;
+}
+
+
+function aggregateRating(ratings, sources){
+  var max_ratings = {};
+  max_ratings.google = 5;
+  max_ratings.foursquare = 10;
+  max_ratings.yelp = 5;
+  var total_count = 0;
+  var total_score = 0;
+  for(s in sources){
+    total_count += ratings[s].rating_count;
+    total_rating += ratings[s].rating_count * (ratings[s].rating/max_ratings[s]);
+  }
+  var temp = {};
+  temp.rating = total_rating/total_count;
+  temp.rating_count = total_count;
+  return score;
+}
+
+function testAggregateRating(){
+  var ratings = testAllRatingsByNameAndLocation();
+  var score = aggregateRating(ratings, ["yelp","google","foursquare"]) * 100;
+  Logger.log(ratings.name + ": " + score.rating +"/100 out of " + score.rating_count +" reviews");
+  return score;
 }
