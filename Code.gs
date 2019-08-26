@@ -327,7 +327,7 @@ function filterResultsByRating(results){
 // String String ---> String
 // Gets the Foursquare ID of a place from name and lat,lng
 function foursquareIDbyNameAndLocation(name, location){
-  var url = foursquareVenueSearch + "name=" + name + "&ll=" + location + "&intent=match";
+  var url = foursquareVenueSearch + "query=" + name + "&ll=" + location + "&intent=checkin";
 
   // API CALL
   var response = UrlFetchApp.fetch(url);
@@ -480,8 +480,8 @@ function allRatingsByNameAndLocation(name, location){
   var google = googleRatingsByNameAndLocation(name, location);
   // Foursquare
   var fs_id = foursquareIDbyNameAndLocation(name, location);
-  var fs_details = foursquareDetailsByID(id);
-  var foursquare = foursquareRatingByDetails(details);
+  var fs_details = foursquareDetailsByID(fs_id);
+  var foursquare = foursquareRatingByDetails(fs_details);
   // Yelp
   var yelp_id = yelpIDByNameAndAddress(name, google.address);
   var yelp = yelpRatingByID(yelp_id);
@@ -491,4 +491,10 @@ function allRatingsByNameAndLocation(name, location){
   temp.yelp = yelp;
   temp.foursquare = foursquare;
   return temp;
+}
+
+function testAllRatingsByNameAndLocation(){
+  var test = allRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
+  Logger.log(test);
+  return test;
 }

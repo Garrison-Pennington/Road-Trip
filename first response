@@ -1,0 +1,8 @@
+{
+  address=3425 Grand Ave, Oakland, CA 94610, USA,
+  name=The Star on Grand,
+  location=37.811527,-122.238814,
+  yelp={price=2, name=The Star on Grand, rating=4, id=SHmkjMmfaQg8YwYYTt70Nw, rating_count=866},
+  foursquare={ratingSignals=240, price=2, name=The Star, rating=9, id=51d8e516498ee58cf100ab90},
+  google={price=2, rating=4.5, id=ChIJrfgOF0OHj4ARi-Eq42V-rOo, rating_count=674}
+}
