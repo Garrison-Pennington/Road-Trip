@@ -469,3 +469,26 @@ function testYelpRatingByID(){
   Logger.log(test);
   return test;
 }
+
+// String String ---> JSON
+// Return ratings from Google, Foursquare, and Yelp given a name and location
+function allRatingsByNameAndLocation(name, location){
+  temp = {}
+  temp.name = name;
+  temp.location = location;
+  // Google
+  var google = googleRatingsByNameAndLocation(name, location);
+  // Foursquare
+  var fs_id = foursquareIDbyNameAndLocation(name, location);
+  var fs_details = foursquareDetailsByID(id);
+  var foursquare = foursquareRatingByDetails(details);
+  // Yelp
+  var yelp_id = yelpIDByNameAndAddress(name, google.address);
+  var yelp = yelpRatingByID(yelp_id);
+  temp.address = google.address;
+  delete google.address;
+  temp.google = google;
+  temp.yelp = yelp;
+  temp.foursquare = foursquare;
+  return temp;
+}
