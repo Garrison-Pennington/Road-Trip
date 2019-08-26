@@ -344,7 +344,7 @@ function testFoursquareIDbyNameAndLocation(){
   return [result, test];
 }
 
-function getFoursquareDetails(id){
+function foursquareDetailsByID(id){
   var url = foursquareDetailsRequest.replace('XXIDXX',id);
 
   // API CALL
@@ -354,26 +354,27 @@ function getFoursquareDetails(id){
   return details;
 }
 
-function testDetails(){
+function testFoursquareDetailsByID(){
   var id = testFoursquareIDbyNameAndLocation();
-  var test = getFoursquareDetails(id[0]);
+  var test = foursquareDetailsByID(id[0]);
   return [test, id[1]]
 }
 
 // JSON ---> JSON
 // Take foursquare venue details and return an object containing the name, rating details, and price
-function foursquareRating(details){
+function foursquareRatingByDetails(details){
   temp = {}
   temp.name = details.response.venue.name;
   temp.rating = details.response.venue.rating;
   temp.ratingSignals = details.response.venue.ratingSignals;
   temp.price = details.response.venue.price.tier;
+  temp.id = details.response.venue.id;
   return temp;
 }
 
-function testFsRating(){
+function testFoursquareRatingByDetails(){
   var details = testDetails();
-  var result = foursquareRating(details[0]);
+  var result = foursquareRatingByDetails(details[0]);
   Logger.log(details[1]);
   Logger.log(result);
   return result;
@@ -415,7 +416,7 @@ function yelpIDByNameAndAddress(name, address){
 
 function testYelpIDByNameAndAddress(){
   var place = testPlaceInfo()[0];
-  var address = getFormattedAddressByID(place.place_id);
+  var address = googleFormattedAddressByID(place.place_id);
   var test = yelpIDByNameAndAddress(place.name, address);
   Logger.log(test);
   return test;
@@ -423,7 +424,7 @@ function testYelpIDByNameAndAddress(){
 
 // String ---> String
 // Take a google place ID and return the formatted address of the place
-function getFormattedAddressByID(id){
+function googleFormattedAddressByID(id){
   var url = placeAddressRequest + id;
 
   // API CALL
@@ -433,10 +434,10 @@ function getFormattedAddressByID(id){
   return json.result.formatted_address;
 }
 
-function testAddressByID(){
+function testGoogleFormattedAddressByID(){
   var info = testPlaceInfo();
   //Logger.log(info);
-  var test = getFormattedAddressByID(info[0].place_id);
+  var test = googleFormattedAddressByID(info[0].place_id);
   //Logger.log(test);
   return test;
 }
