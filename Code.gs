@@ -375,11 +375,22 @@ function testFoursquareDetailsByID(){
 // Take foursquare venue details and return an object containing the name, rating details, and price
 function foursquareRatingByDetails(details){
   var temp = {};
-  temp.name = details.response.venue.name;
-  temp.rating = details.response.venue.rating;
-  temp.rating_count = details.response.venue.ratingSignals;
-  temp.price = details.response.venue.price.tier;
-  temp.id = details.response.venue.id;
+  if(details.response.venue.name != undefined){
+    temp.name = details.response.venue.name;
+  }
+  if(details.response.venue.rating != undefined){
+    temp.rating = details.response.venue.rating;
+  }
+  if(details.response.venue.ratingSignals != undefined){
+    temp.rating_count = details.response.venue.ratingSignals;
+  }
+  if(details.response.venue.price != undefined){
+    temp.price = details.response.venue.price.tier;
+  }
+  if(details.response.venue.id != undefined){
+    temp.id = details.response.venue.id;
+  }
+
   return temp;
 }
 
@@ -466,12 +477,22 @@ function yelpRatingByID(id){
 
   var info = JSON.parse(response.getContentText());
   var temp = {};
-  temp.name = info.name;
-  temp.price = info.price.length;
-  temp.rating = info.rating;
-  temp.rating_count = info.review_count;
-  temp.id = id;
-  return temp;
+  if(info.name != undefined){
+    temp.name = info.name;
+  }
+  if(info.price != undefined){
+    temp.price = info.price.length;
+  }
+  if(info.rating != undefined){
+    temp.rating = info.rating;
+  }
+  if(info.review_count != undefined){
+    temp.rating_count = info.review_count;
+  }
+  if(info.id != undefined){
+    temp.id = id;
+  }
+    return temp;
 }
 
 function testYelpRatingByID(){
