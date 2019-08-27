@@ -108,11 +108,22 @@ function googleRatingsByNameAndLocation(name, location){
   var json = JSON.parse(response.getContentText());
   var temp = {};
   var details = json.candidates[0];
-  temp.address = details.formatted_address;
-  temp.rating = details.rating;
-  temp.rating_count = details.user_ratings_total;
-  temp.id = details.place_id;
-  temp.price = details.price_level;
+  if(details.formatted_address != undefined){
+    temp.address = details.formatted_address;
+  }
+  if(details.rating != undefined){
+    temp.rating = details.rating;
+  }
+  if(details.user_ratings_total != undefined){
+    temp.rating_count = details.user_ratings_total;
+  }
+  if(details.place_id != undefined){
+    temp.id = details.place_id;
+  }
+  if(details.price_level != undefined){
+    temp.price = details.price_level;
+  }
+
   return temp;
 }
 
@@ -315,7 +326,7 @@ function tester(){
 // JSON ---> JSON
 // Filter out results with low ratings and review counts
 function filterResultsByRating(results){
-  temp = {}
+  var temp = {}
   for(var r in results){
     if(results[r].user_ratings_total > 10){
       if(results[r].rating >= 4.5){
@@ -363,7 +374,7 @@ function testFoursquareDetailsByID(){
 // JSON ---> JSON
 // Take foursquare venue details and return an object containing the name, rating details, and price
 function foursquareRatingByDetails(details){
-  temp = {}
+  var temp = {};
   temp.name = details.response.venue.name;
   temp.rating = details.response.venue.rating;
   temp.rating_count = details.response.venue.ratingSignals;
@@ -386,7 +397,7 @@ function getAddressComponents(formatted){
   for(i = 0; i<comps.length;i++){
     comps[i] = comps[i].trim();
   }
-  temp = {};
+  var temp = {};
   temp.street = comps[0];
   temp.city = comps[1];
   temp.state = comps[2].substring(0,2);
@@ -454,7 +465,7 @@ function yelpRatingByID(id){
   var response = UrlFetchApp.fetch(url, options);
 
   var info = JSON.parse(response.getContentText());
-  temp = {};
+  var temp = {};
   temp.name = info.name;
   temp.price = info.price.length;
   temp.rating = info.rating;
@@ -473,7 +484,7 @@ function testYelpRatingByID(){
 // String String ---> JSON
 // Return ratings from Google, Foursquare, and Yelp given a name and location
 function allRatingsByNameAndLocation(name, location){
-  temp = {}
+  var temp = {};
   temp.name = name;
   temp.location = location;
   // Google
@@ -499,27 +510,56 @@ function testAllRatingsByNameAndLocation(){
   return test;
 }
 
-
+// JSON ListOf:String ---> {rating:float, count:int}
+// Return the aggregate score of a place from all its review sources
 function aggregateRating(ratings, sources){
+  if (sources === undefined){
+    sources = ["yelp","google","foursquare"];
+  }
   var max_ratings = {};
-  max_ratings.google = 5;
-  max_ratings.foursquare = 10;
-  max_ratings.yelp = 5;
+  max_ratings.google = 4;
+  max_ratings.foursquare = 9;
+  max_ratings.yelp = 4;
   var total_count = 0;
   var total_score = 0;
-  for(s in sources){
-    total_count += ratings[s].rating_count;
-    total_rating += ratings[s].rating_count * (ratings[s].rating/max_ratings[s]);
+  for(var s = 0; s < sources.length; s++){
+    var source = sources[s];
+    total_count += ratings[source].rating_count;
+    total_score += ratings[source].rating_count * ((ratings[source].rating-1)/max_ratings[source]);
   }
   var temp = {};
-  temp.rating = total_rating/total_count;
+  temp.rating = (total_score/total_count) * 100;
   temp.rating_count = total_count;
-  return score;
+  return temp;
 }
 
 function testAggregateRating(){
   var ratings = testAllRatingsByNameAndLocation();
-  var score = aggregateRating(ratings, ["yelp","google","foursquare"]) * 100;
+  var score = aggregateRating(ratings);
   Logger.log(ratings.name + ": " + score.rating +"/100 out of " + score.rating_count +" reviews");
   return score;
+}
+
+
+function reviewPlacesInSheet(){
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  for(var i = 1; i< data.length + 1; i++){
+    var name = data[i][0];
+    var location = data[i][2];
+    var reviews = allRatingsByNameAndLocation(name, location);
+    // Google Ratings
+    sheet.getRange(i+1, 6).setValue(reviews.google.rating);
+    sheet.getRange(i+1, 7).setValue(reviews.google.rating_count);
+    // Foursquare Ratings
+    sheet.getRange(i+1, 8).setValue(reviews.foursquare.rating);
+    sheet.getRange(i+1, 9).setValue(reviews.foursquare.rating_count);
+    // Yelp Ratings
+    sheet.getRange(i+1, 10).setValue(reviews.yelp.rating);
+    sheet.getRange(i+1, 11).setValue(reviews.yelp.rating_count);
+    // Aggregate
+    agg = aggregateRating(reviews);
+    sheet.getRange(i+1, 4).setValue(agg.rating);
+    sheet.getRange(i+1, 5).setValue(agg.rating_count);
+  }
 }
