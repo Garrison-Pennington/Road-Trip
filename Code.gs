@@ -1,8 +1,3 @@
-var searchRadius = 50000;
-var waypointSpacing = searchRadius*1.25;
-var maxWaypointSpacing = waypointSpacing*1.25;
-
-
 // *** APIs ***
 // Google Authentication
 var google_project_key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
@@ -96,6 +91,10 @@ var yelpMatchRequest = "https://api.yelp.com/v3/businesses/matches";
 
 // Details request
 var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
+//======================================================================================================================
+// FUNCTIONS
+//======================================================================================================================
+// GOOGLE FUNCTIONS
 
 // String String ---> {name:{rating:float, rating_count:int, price:int, id:str}}
 // Get atmosphere info for a place from google by its name and nearby lat long
@@ -138,6 +137,27 @@ function testGoogleRatingsByNameAndLocation(){
   return test;
 }
 
+// String ---> String
+// Take a google place ID and return the formatted address of the place
+function googleFormattedAddressByID(id){
+  var url = placeAddressRequest + id;
+
+  // API CALL
+  var response = UrlFetchApp.fetch(url);
+
+  var json = JSON.parse(response.getContentText());
+  return json.result.formatted_address;
+}
+
+function testGoogleFormattedAddressByID(){
+  var info = testPlaceInfo();
+  //Logger.log(info);
+  var test = googleFormattedAddressByID(info[0].place_id);
+  //Logger.log(test);
+  return test;
+}
+
+
 // Location String String ---> JSON
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
 function nearbySearch(coordinates,keywords,type){
@@ -165,6 +185,8 @@ function filterResultsByRating(results){
   }}}
   return temp;
 }
+//======================================================================================================================
+// FOURSQUARE FUNCTIONS
 
 // String String ---> String
 // Gets the Foursquare ID of a place from name and lat,lng
@@ -186,6 +208,8 @@ function testFoursquareIDbyNameAndLocation(){
   return [result, test];
 }
 
+// String ---> JSON
+// Gets the foursquare api details of a place from its FSID
 function foursquareDetailsByID(id){
   var url = foursquareDetailsRequest.replace('XXIDXX',id);
 
@@ -232,6 +256,8 @@ function testFoursquareRatingByDetails(){
   Logger.log(result);
   return result;
 }
+//======================================================================================================================
+// YELP FUNCTIONS
 
 // String ---> {street:str, city:str, state:str, country:str}
 function getAddressComponents(formatted){
@@ -274,26 +300,6 @@ function testYelpIDByNameAndAddress(){
   return test;
 }
 
-// String ---> String
-// Take a google place ID and return the formatted address of the place
-function googleFormattedAddressByID(id){
-  var url = placeAddressRequest + id;
-
-  // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var json = JSON.parse(response.getContentText());
-  return json.result.formatted_address;
-}
-
-function testGoogleFormattedAddressByID(){
-  var info = testPlaceInfo();
-  //Logger.log(info);
-  var test = googleFormattedAddressByID(info[0].place_id);
-  //Logger.log(test);
-  return test;
-}
-
 // String ---> {name:str, price:int(1-4), rating:float(1-5), review_count:int}
 // Return price and rating info from yelp by a yelp id
 function yelpRatingByID(id){
@@ -331,6 +337,8 @@ function testYelpRatingByID(){
   Logger.log(test);
   return test;
 }
+//======================================================================================================================
+
 
 // String String ---> JSON
 // Return ratings from Google, Foursquare, and Yelp given a name and location
@@ -391,7 +399,7 @@ function testAggregateRating(){
   return score;
 }
 
-
+// Take Names and Locations from the Active sheet and insert their reviews
 function reviewPlacesInSheet(){
   var sheet = SpreadsheetApp.getActiveSheet();
   var data = sheet.getDataRange().getValues();
