@@ -77,7 +77,7 @@ var placeSearchRequest = "https://maps.googleapis.com/maps/api/place/findplacefr
 
   Optional:
   - fields: which fields to return about the place
-  - location: lat,lng
+  - locationbias: point:lat,lng
 */
 
 //==========================================================================================================================================
@@ -100,30 +100,35 @@ var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 // String String ---> {name:{rating:float, rating_count:int, price:int, id:str}}
 // Get atmosphere info for a place from google by its name and nearby lat long
 function googleRatingsByNameAndLocation(name, location){
-  var url = placeSearchRequest + "input=" + name + "&inputtype=textquery&location=" + location;
+  var url = placeSearchRequest + "input=" + name + "&inputtype=textquery&locationbias=point:" + location;
 
   // API CALL
   var response = UrlFetchApp.fetch(url);
 
   var json = JSON.parse(response.getContentText());
   var temp = {};
+  Logger.log(json);
   var details = json.candidates[0];
-  if(details.formatted_address != undefined){
-    temp.address = details.formatted_address;
+  if(json.status != "ZERO_RESULTS"){
+    if(details.formatted_address != undefined){
+      temp.address = details.formatted_address;
+    }
+    if(details.rating != undefined){
+      temp.rating = details.rating;
+    }
+    if(details.user_ratings_total != undefined){
+      temp.rating_count = details.user_ratings_total;
+    }
+    if(details.place_id != undefined){
+      temp.id = details.place_id;
+    }
+    if(details.price_level != undefined){
+      temp.price = details.price_level;
+    }
+  }else{
+    Logger.log("Google returned zero results!");
+    return "NONE";
   }
-  if(details.rating != undefined){
-    temp.rating = details.rating;
-  }
-  if(details.user_ratings_total != undefined){
-    temp.rating_count = details.user_ratings_total;
-  }
-  if(details.place_id != undefined){
-    temp.id = details.place_id;
-  }
-  if(details.price_level != undefined){
-    temp.price = details.price_level;
-  }
-
   return temp;
 }
 
@@ -431,7 +436,6 @@ function yelpIDByNameAndAddress(name, address){
 
   // API CALL
   var response = UrlFetchApp.fetch(url, options);
-
   var info = JSON.parse(response.getContentText());
   return info.businesses[0].id;
 }
@@ -515,7 +519,7 @@ function allRatingsByNameAndLocation(name, location){
   var fs_details = foursquareDetailsByID(fs_id);
   var foursquare = foursquareRatingByDetails(fs_details);
   // Yelp
-  var yelp_id = yelpIDByNameAndAddress(name, google.address);
+  var yelp_id = yelpIDByNameAndAddress(name, google.address, location);
   var yelp = yelpRatingByID(yelp_id);
   temp.address = google.address;
   delete google.address;
@@ -566,21 +570,25 @@ function reviewPlacesInSheet(){
   var sheet = SpreadsheetApp.getActiveSheet();
   var data = sheet.getDataRange().getValues();
   for(var i = 1; i< data.length + 1; i++){
-    var name = data[i][0];
-    var location = data[i][2];
-    var reviews = allRatingsByNameAndLocation(name, location);
-    // Google Ratings
-    sheet.getRange(i+1, 6).setValue(reviews.google.rating);
-    sheet.getRange(i+1, 7).setValue(reviews.google.rating_count);
-    // Foursquare Ratings
-    sheet.getRange(i+1, 8).setValue(reviews.foursquare.rating);
-    sheet.getRange(i+1, 9).setValue(reviews.foursquare.rating_count);
-    // Yelp Ratings
-    sheet.getRange(i+1, 10).setValue(reviews.yelp.rating);
-    sheet.getRange(i+1, 11).setValue(reviews.yelp.rating_count);
-    // Aggregate
-    agg = aggregateRating(reviews);
-    sheet.getRange(i+1, 4).setValue(agg.rating);
-    sheet.getRange(i+1, 5).setValue(agg.rating_count);
+    if(typeof data[i][4] == "number"){
+
+    }else{
+      var name = data[i][0];
+      var location = data[i][2];
+      var reviews = allRatingsByNameAndLocation(name, location);
+      // Google Ratings
+      sheet.getRange(i+1, 6).setValue(reviews.google.rating);
+      sheet.getRange(i+1, 7).setValue(reviews.google.rating_count);
+      // Foursquare Ratings
+      sheet.getRange(i+1, 8).setValue(reviews.foursquare.rating);
+      sheet.getRange(i+1, 9).setValue(reviews.foursquare.rating_count);
+      // Yelp Ratings
+      sheet.getRange(i+1, 10).setValue(reviews.yelp.rating);
+      sheet.getRange(i+1, 11).setValue(reviews.yelp.rating_count);
+      // Aggregate
+      agg = aggregateRating(reviews);
+      sheet.getRange(i+1, 4).setValue(agg.rating);
+      sheet.getRange(i+1, 5).setValue(agg.rating_count);
+    }
   }
 }
