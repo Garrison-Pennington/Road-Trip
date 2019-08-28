@@ -3,6 +3,11 @@ var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
 var country_codes = {};
 country_codes["United States"] = "US";
+country_codes["Canada"] = "CA";
+country_codes["Colombia"] = "CO";
+var state_codes = {};
+state_codes["Antioquia"] = "ANT";
+var yelp_supported_countries = [];
 
 // *** APIs ***
 // Google Authentication
@@ -276,6 +281,12 @@ function googleRatingsAndAddressByNearbyResults(results){
     }else{
       temp[r.name].price = "";
     }
+    if(r.geometry.location != undefined){
+      temp[r.name].location = r.geometry.location.lat + "," + r.geometry.location.lng;
+    }else{
+      temp[r.name].location = "";
+    }
+    temp[r.name].name = r.name;
   }
   return temp;
 }
@@ -384,9 +395,15 @@ function testFoursquareRatingByDetails(){
 // String ---> {street:str, city:str, state:str, country:str}
 // Take a formatted address and break it down into its components and return them in an object
 function getAddressComponents(formatted){
+  var regex = /#/gi;
+  formatted = formatted.replace(regex,"");
   var comps = formatted.split(",");
   if(isOnlyNumber(comps[0])){
    formatted = formatted.replace(",","");
+    comps = formatted.split(",");
+  }
+  while(comps.length > 4){
+    formatted = formatted.replace(",","");
     comps = formatted.split(",");
   }
   for(i = 0; i<comps.length;i++){
@@ -395,7 +412,11 @@ function getAddressComponents(formatted){
   var temp = {};
   temp.street = comps[0];
   temp.city = comps[1];
-  temp.state = comps[2].substring(0,2);
+  if(comps[2].length > 2){
+    temp.state = state_codes[comps[2]];
+  }else{
+    temp.state = comps[2].substring(0,2);
+  }
   if(comps[3].length > 3){
     temp.country = country_codes[comps[3]];
   }else{
@@ -424,6 +445,7 @@ function yelpIDByNameAndAddress(name, address){
   url += "&city=" + loc.city;
   url += "&state=" + loc.state;
   url += "&country=" + loc.country;
+  Logger.log(url)
   var authHeader = "Bearer " + yelp_key;
   var options = {headers: {Authorization: authHeader}}
 
@@ -531,6 +553,53 @@ function allRatingsByNameAndLocation(name, location){
 }
 
 
+function allRatingsFromGoogleRating(data){
+  var temp = {};
+  temp.name = data.name;
+  temp.location = data.location;
+  var google = data;
+  delete google.location;
+  // Foursquare
+  var fs_id = foursquareIDbyNameAndLocation(temp.name, temp.location);
+  if(fs_id != ""){
+    var fs_details = foursquareDetailsByID(fs_id);
+    if(fs_details != ""){
+      var foursquare = foursquareRatingByDetails(fs_details);
+    }
+  }
+  // Yelp
+  Logger.log(temp.name);
+  Logger.log(google.address);
+  if(google != "" && google.address != ""){
+    var yelp_id = yelpIDByNameAndAddress(temp.name, google.address);
+    var yelp = yelpRatingByID(yelp_id);
+    temp.yelp = yelp;
+    temp.address = google.address;
+    delete google.address;
+  }else if(foursquare != "" && foursquare.address != ""){
+    var yelp_id = yelpIDByNameAndAddress(temp.name, foursquare.address);
+    var yelp = yelpRatingByID(yelp_id);
+  }else{
+    var yelp = "";
+  }
+  temp.yelp = yelp;
+  temp.google = google;
+  temp.foursquare = foursquare;
+  return temp;
+}
+
+function testAllRatingsFromGoogleRating(){
+  var results = testGoogleRatingsAndAddressByNearbyResults();
+  var t_name = "";
+  for(k in results){
+    t_name = k;
+    break;
+  }
+  var test = allRatingsFromGoogleRating(results[t_name]);
+  Logger.log(test);
+  return test;
+}
+
 function testAllRatingsByNameAndLocation(){
   var test = allRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
   //Logger.log(test);
@@ -593,4 +662,65 @@ function reviewPlacesInSheet(){
       sheet.getRange(i+1, 5).setValue(agg.rating_count);
     }
   }
+}
+
+function addDiscoveriesToSheet(ratings, city){
+  if(city == undefined){
+    city = "";
+  }
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  for(var i in ratings){
+    var r = ratings[i];
+    var row = [];
+    row.push(r.name);
+    row.push(city);
+    row.push(r.location);
+    var agg = aggregateRating(r);
+    row.push(agg.rating);
+    row.push(agg.rating_count);
+    row.push(r.google.rating);
+    row.push(r.google.rating_count);
+    row.push(r.foursquare.rating);
+    row.push(r.foursquare.rating_count);
+    row.push(r.yelp.rating);
+    row.push(r.yelp.rating_count);
+    sheet.appendRow(row);
+  }
+}
+
+function discoverFood(city, state, query){
+  if(query == undefined){
+    query = "";
+  }
+  // Get the place_id of the City
+  var google_id = googleIDByCityAndState(city, state);
+
+  // Get the coordinates of the city from the place_id
+  // API CALL
+  var coors = googleCoorsByID(google_id)  ;
+
+  var nearby = nearbySearch(coors, query, "restaurant").results;
+
+  var google_ratings = googleRatingsAndAddressByNearbyResults(nearby);
+
+  var all_ratings = allFromGoogleForMultiple(google_ratings);
+
+  addDiscoveriesToSheet(all_ratings, city);
+}
+
+function testDiscover(){
+  //discoverFood("Oakland", "CA");
+  //discoverFood("San Diego", "CA", "");
+  //discoverFood("Vancouver", "BC", "tacos");
+  discoverFood("Medellin", "ANT");
+}
+
+
+function allFromGoogleForMultiple(ratings){
+  var temp = {};
+  for(var k in ratings){
+    temp[k] = allRatingsFromGoogleRating(ratings[k]);
+  }
+  return temp;
 }
