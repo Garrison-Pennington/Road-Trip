@@ -1,4 +1,4 @@
-var searchRadius = 50000;
+var searchRadius = 25000;
 var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
 var country_codes = {};
@@ -58,7 +58,7 @@ Type: Supported type, see https://developers.google.com/places/web-service/suppo
 */
 
 // Details request for address
-var placeAddressRequest = "https://maps.googleapis.com/maps/api/place/details/json?key=" + google_project_key + "&fields=formatted_address" + "&placeid=";
+var placeDetailsRequest = "https://maps.googleapis.com/maps/api/place/details/json?key=" + google_project_key + "&placeid=";
 /* Required Parameters:
  - key: Applications API key, already included in variable
  - placeid: Google's unique identifier for a place, parameter already declared, just add the id to the end of the string for a useable URL
@@ -153,10 +153,52 @@ function testGoogleRatingsByNameAndLocation(){
   return test;
 }
 
+function googleIDByCityAndState(city, state){
+  var url = placeSearchRequest + "input=" + city + "," + state + "&inputtype=textquery";
+
+  // API CALL
+  var response = UrlFetchApp.fetch(url);
+
+  var json = JSON.parse(response.getContentText());
+
+  return json.candidates[0].place_id;
+}
+
+function testGoogleIDByCityAndState(){
+  var test1 = googleIDByCityAndState("Oakland", "CA");
+  var test2 = googleIDByCityAndState("San Diego", "CA");
+  var test3 = googleIDByCityAndState("New York", "NY");
+
+  Logger.log(test1);
+  Logger.log(test2);
+  Logger.log(test3);
+
+  return test1
+}
+
+
+function googleCoorsByID(id){
+  var url = placeDetailsRequest + id;
+
+  // API CALL
+  var response = UrlFetchApp.fetch(url);
+
+  var json = JSON.parse(response.getContentText());
+
+  var coors = json.result.geometry.location;
+  return coors.lat + "," + coors.lng;
+}
+
+function testGoogleCoorsByID(){
+  var test = googleCoorsByID(testGoogleIDByCityAndState());
+  Logger.log(test);
+  return test;
+}
+
 // String ---> String
 // Take a google place ID and return the formatted address of the place
 function googleFormattedAddressByID(id){
-  var url = placeAddressRequest + id;
+  var url = placeDetailsRequest + id + "&fields=formatted_address";
 
   // API CALL
   var response = UrlFetchApp.fetch(url);
@@ -177,7 +219,7 @@ function testGoogleFormattedAddressByID(){
 // Location String String ---> JSON
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
 function nearbySearch(coordinates,keywords,type){
-  var url = nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type;
+  var url = nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type+"&radius="+searchRadius;
 
   // API CALL
   var response = JSON.parse(UrlFetchApp.fetch(url).getContentText());
@@ -187,6 +229,7 @@ function nearbySearch(coordinates,keywords,type){
 
 function testNearby(){
   var test = nearbySearch("37.811410,-122.238268","pizza","restaurant");
+  //Logger.log(test);
   return test.results;
 }
 
@@ -200,6 +243,47 @@ function filterResultsByRating(results){
         temp[r] = results[r];
   }}}
   return temp;
+}
+
+function googleRatingsAndAddressByNearbyResults(results){
+  var temp = {};
+  for(var i = 0; i < results.length; i++){
+    var r = results[i];
+    var address = googleFormattedAddressByID(r.place_id);
+    temp[r.name] = {};
+    if(address != undefined){
+      temp[r.name].address = address;
+    }else{
+      temp[r.name].address = "";
+    }
+    if(r.rating != undefined){
+      temp[r.name].rating = r.rating;
+    }else{
+      temp[r.name].rating = "";
+    }
+    if(r.user_ratings_total != undefined){
+      temp[r.name].rating_count = r.user_ratings_total;
+    }else{
+      temp[r.name].rating_count = "";
+    }
+    if(r.place_id != undefined){
+      temp[r.name].id = r.place_id;
+    }else{
+      temp[r.name].id = "";
+    }
+    if(r.price_level != undefined){
+      temp[r.name].price = r.price_level;
+    }else{
+      temp[r.name].price = "";
+    }
+  }
+  return temp;
+}
+
+function testGoogleRatingsAndAddressByNearbyResults(){
+  var test = googleRatingsAndAddressByNearbyResults(testNearby());
+  Logger.log(test);
+  return test;
 }
 //======================================================================================================================
 // FOURSQUARE FUNCTIONS
@@ -317,7 +401,6 @@ function getAddressComponents(formatted){
   }else{
     temp.country = comps[3].substring(0,2);
   }
-
   return temp;
 }
 
@@ -446,6 +529,7 @@ function allRatingsByNameAndLocation(name, location){
   temp.foursquare = foursquare;
   return temp;
 }
+
 
 function testAllRatingsByNameAndLocation(){
   var test = allRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
