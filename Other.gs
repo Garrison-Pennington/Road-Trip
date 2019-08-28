@@ -1,6 +1,3 @@
-var searchRadius = 50000;
-var waypointSpacing = searchRadius*1.25;
-var maxWaypointSpacing = waypointSpacing*1.25;
 
 
 // Place[] ---> {Name: {Ratings:float,User_ratings_total: int, price_level: int, place_id: String}}

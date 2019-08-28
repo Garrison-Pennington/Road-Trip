@@ -1,3 +1,9 @@
+var searchRadius = 50000;
+var waypointSpacing = searchRadius*1.25;
+var maxWaypointSpacing = waypointSpacing*1.25;
+var country_codes = {};
+country_codes["United States"] = "US";
+
 // *** APIs ***
 // Google Authentication
 var google_project_key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
@@ -96,7 +102,7 @@ var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 //======================================================================================================================
 // GOOGLE FUNCTIONS
 
-// String String ---> {name:{rating:float, rating_count:int, price:int, id:str}}
+// String String ---> {name:{rating:float, rating_count:int, price:int, id:str}} OR ""
 // Get atmosphere info for a place from google by its name and nearby lat long
 function googleRatingsByNameAndLocation(name, location){
   var url = placeSearchRequest + "input=" + name + "&inputtype=textquery&locationbias=point:" + location;
@@ -106,27 +112,37 @@ function googleRatingsByNameAndLocation(name, location){
 
   var json = JSON.parse(response.getContentText());
   var temp = {};
-  Logger.log(json);
   var details = json.candidates[0];
+
   if(json.status != "ZERO_RESULTS"){
     if(details.formatted_address != undefined){
       temp.address = details.formatted_address;
+    }else{
+      temp.address = "";
     }
     if(details.rating != undefined){
       temp.rating = details.rating;
+    }else{
+      temp.rating = "";
     }
     if(details.user_ratings_total != undefined){
       temp.rating_count = details.user_ratings_total;
+    }else{
+      temp.rating_count = "";
     }
     if(details.place_id != undefined){
       temp.id = details.place_id;
+    }else{
+      temp.id = "";
     }
     if(details.price_level != undefined){
       temp.price = details.price_level;
+    }else{
+      temp.price = "";
     }
   }else{
     Logger.log("Google returned zero results!");
-    return "NONE";
+    return "";
   }
   return temp;
 }
@@ -197,7 +213,11 @@ function foursquareIDbyNameAndLocation(name, location){
   var response = UrlFetchApp.fetch(url);
 
   var fPlace = JSON.parse(response.getContentText());
-  return fPlace.response.venues[0].id;
+  if(fPlace.response.venues[0] != undefined){
+    return fPlace.response.venues[0].id;
+  }else{
+    return "";
+  }
 }
 
 function testFoursquareIDbyNameAndLocation(){
@@ -217,7 +237,11 @@ function foursquareDetailsByID(id){
   var response = UrlFetchApp.fetch(url);
 
   var details = JSON.parse(response.getContentText());
-  return details;
+  if(details != undefined){
+    return details;
+  }else{
+    return "";
+  }
 }
 
 function testFoursquareDetailsByID(){
@@ -232,20 +256,34 @@ function foursquareRatingByDetails(details){
   var temp = {};
   if(details.response.venue.name != undefined){
     temp.name = details.response.venue.name;
+  }else{
+    temp.name = "";
   }
   if(details.response.venue.rating != undefined){
     temp.rating = details.response.venue.rating;
+  }else{
+    temp.rating = "";
   }
   if(details.response.venue.ratingSignals != undefined){
     temp.rating_count = details.response.venue.ratingSignals;
+  }else{
+    temp.rating_count = "";
   }
   if(details.response.venue.price != undefined){
     temp.price = details.response.venue.price.tier;
+  }else{
+    temp.price = "";
   }
   if(details.response.venue.id != undefined){
     temp.id = details.response.venue.id;
+  }else{
+    temp.id = "";
   }
-
+  if(details.response.venue.location != undefined){
+    temp.address = details.response.venue.location.address + "," + details.response.venue.location.city + "," + details.response.venue.location.state + "," + details.response.venue.location.cc;
+  }else{
+    temp.id = "";
+  }
   return temp;
 }
 
@@ -260,8 +298,13 @@ function testFoursquareRatingByDetails(){
 // YELP FUNCTIONS
 
 // String ---> {street:str, city:str, state:str, country:str}
+// Take a formatted address and break it down into its components and return them in an object
 function getAddressComponents(formatted){
-  comps = formatted.split(",");
+  var comps = formatted.split(",");
+  if(isOnlyNumber(comps[0])){
+   formatted = formatted.replace(",","");
+    comps = formatted.split(",");
+  }
   for(i = 0; i<comps.length;i++){
     comps[i] = comps[i].trim();
   }
@@ -269,8 +312,23 @@ function getAddressComponents(formatted){
   temp.street = comps[0];
   temp.city = comps[1];
   temp.state = comps[2].substring(0,2);
-  temp.country = comps[3].substring(0,2);
+  if(comps[3].length > 3){
+    temp.country = country_codes[comps[3]];
+  }else{
+    temp.country = comps[3].substring(0,2);
+  }
+
   return temp;
+}
+
+function isOnlyNumber(address){
+  var nums_and_syms = "0123456789- "
+  for(var i = 0; i < address.length; i++){
+    if(nums_and_syms.indexOf(address[i]) == -1){
+      return false;
+    }
+  }
+  return true;
 }
 
 // String String ---> JSON
@@ -289,7 +347,11 @@ function yelpIDByNameAndAddress(name, address){
   // API CALL
   var response = UrlFetchApp.fetch(url, options);
   var info = JSON.parse(response.getContentText());
-  return info.businesses[0].id;
+  if(info.businesses[0] != undefined){
+    return info.businesses[0].id;
+  }else{
+    return "";
+  }
 }
 
 function testYelpIDByNameAndAddress(){
@@ -313,22 +375,32 @@ function yelpRatingByID(id){
 
   var info = JSON.parse(response.getContentText());
   var temp = {};
+
   if(info.name != undefined){
     temp.name = info.name;
+  }else{
+    temp.name = "";
   }
+
   if(info.price != undefined){
     temp.price = info.price.length;
+  }else{
+    temp.price = "";
   }
+
   if(info.rating != undefined){
     temp.rating = info.rating;
+  }else{
+    temp.rating = "";
   }
+
   if(info.review_count != undefined){
     temp.rating_count = info.review_count;
+  }else{
+    temp.rating_count = "";
   }
-  if(info.id != undefined){
-    temp.id = id;
-  }
-    return temp;
+  temp.id = id;
+  return temp;
 }
 
 function testYelpRatingByID(){
@@ -350,15 +422,27 @@ function allRatingsByNameAndLocation(name, location){
   var google = googleRatingsByNameAndLocation(name, location);
   // Foursquare
   var fs_id = foursquareIDbyNameAndLocation(name, location);
-  var fs_details = foursquareDetailsByID(fs_id);
-  var foursquare = foursquareRatingByDetails(fs_details);
+  if(fs_id != ""){
+    var fs_details = foursquareDetailsByID(fs_id);
+    if(fs_details != ""){
+      var foursquare = foursquareRatingByDetails(fs_details);
+    }
+  }
   // Yelp
-  var yelp_id = yelpIDByNameAndAddress(name, google.address, location);
-  var yelp = yelpRatingByID(yelp_id);
-  temp.address = google.address;
-  delete google.address;
-  temp.google = google;
+  if(google != "" && google.address != ""){
+    var yelp_id = yelpIDByNameAndAddress(name, google.address);
+    var yelp = yelpRatingByID(yelp_id);
+    temp.yelp = yelp;
+    temp.address = google.address;
+    delete google.address;
+  }else if(foursquare != "" && foursquare.address != ""){
+    var yelp_id = yelpIDByNameAndAddress(name, foursquare.address);
+    var yelp = yelpRatingByID(yelp_id);
+  }else{
+    var yelp = "";
+  }
   temp.yelp = yelp;
+  temp.google = google;
   temp.foursquare = foursquare;
   return temp;
 }
@@ -383,8 +467,8 @@ function aggregateRating(ratings, sources){
   var total_score = 0;
   for(var s = 0; s < sources.length; s++){
     var source = sources[s];
-    total_count += ratings[source].rating_count;
-    total_score += ratings[source].rating_count * ((ratings[source].rating-1)/max_ratings[source]);
+    total_count += (ratings[source].rating_count ? ratings[source].rating_count : 0);
+    total_score += (ratings[source].rating_count ? ratings[source].rating_count * ((ratings[source].rating-1)/max_ratings[source]) : 0);
   }
   var temp = {};
   temp.rating = (total_score/total_count) * 100;
