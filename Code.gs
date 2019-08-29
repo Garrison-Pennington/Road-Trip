@@ -1,13 +1,14 @@
-var searchRadius = 25000;
+var searchRadius = 11000;
 var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
 var country_codes = {};
 country_codes["United States"] = "US";
+country_codes["USA"] = "US";
 country_codes["Canada"] = "CA";
 country_codes["Colombia"] = "CO";
 var state_codes = {};
 state_codes["Antioquia"] = "ANT";
-var yelp_supported_countries = [];
+var yelp_supported_countries = ["US","CA"];
 
 // *** APIs ***
 // Google Authentication
@@ -422,6 +423,9 @@ function getAddressComponents(formatted){
   }else{
     temp.country = comps[3].substring(0,2);
   }
+  if(temp.country == "US" || temp.country == "CA"){
+    temp.state = comps[2].substring(0,2);
+  }
   return temp;
 }
 
@@ -440,22 +444,26 @@ function isOnlyNumber(address){
 function yelpIDByNameAndAddress(name, address){
   var url = yelpMatchRequest + "?";
   var loc = getAddressComponents(address);
-  url += "name=" + name;
-  url += "&address1=" + loc.street;
-  url += "&city=" + loc.city;
-  url += "&state=" + loc.state;
-  url += "&country=" + loc.country;
-  Logger.log(url)
-  var authHeader = "Bearer " + yelp_key;
-  var options = {headers: {Authorization: authHeader}}
+  if(yelp_supported_countries.indexOf(loc.country) != -1){
+    url += "name=" + name;
+    url += "&address1=" + loc.street;
+    url += "&city=" + loc.city;
+    url += "&state=" + loc.state;
+    url += "&country=" + loc.country;
+    Logger.log(url)
+    var authHeader = "Bearer " + yelp_key;
+    var options = {headers: {Authorization: authHeader}}
 
-  // API CALL
-  var response = UrlFetchApp.fetch(url, options);
-  var info = JSON.parse(response.getContentText());
-  if(info.businesses[0] != undefined){
-    return info.businesses[0].id;
+    // API CALL
+    var response = UrlFetchApp.fetch(url, options);
+    var info = JSON.parse(response.getContentText());
+    if(info.businesses[0] != undefined){
+      return info.businesses[0].id;
+    }else{
+      return "";
+    }
   }else{
-    return "";
+    return "Unsupported country";
   }
 }
 
@@ -526,6 +534,7 @@ function allRatingsByNameAndLocation(name, location){
   // Google
   var google = googleRatingsByNameAndLocation(name, location);
   // Foursquare
+  var foursquare = {};
   var fs_id = foursquareIDbyNameAndLocation(name, location);
   if(fs_id != ""){
     var fs_details = foursquareDetailsByID(fs_id);
@@ -534,17 +543,24 @@ function allRatingsByNameAndLocation(name, location){
     }
   }
   // Yelp
-  if(google != "" && google.address != ""){
-    var yelp_id = yelpIDByNameAndAddress(name, google.address);
-    var yelp = yelpRatingByID(yelp_id);
-    temp.yelp = yelp;
-    temp.address = google.address;
-    delete google.address;
-  }else if(foursquare != "" && foursquare.address != ""){
-    var yelp_id = yelpIDByNameAndAddress(name, foursquare.address);
-    var yelp = yelpRatingByID(yelp_id);
-  }else{
-    var yelp = "";
+  var yelp = {};
+  var country = google.address.split(",").pop().trim();
+  if(yelp_supported_countries.indexOf(country_codes[country]) != -1){
+    if(google != "" && google.address != ""){
+      var yelp_id = yelpIDByNameAndAddress(name, google.address);
+      if(yelp_id != "Unsupported country"){
+        var yelp = yelpRatingByID(yelp_id);
+      }
+      temp.address = google.address;
+      delete google.address;
+    }else if(foursquare != "" && foursquare.address != ""){
+      var yelp_id = yelpIDByNameAndAddress(name, foursquare.address);
+      if(yelp_id != "Unsupported country"){
+        var yelp = yelpRatingByID(yelp_id);
+      }
+    }else{
+      var yelp = "";
+    }
   }
   temp.yelp = yelp;
   temp.google = google;
@@ -555,11 +571,12 @@ function allRatingsByNameAndLocation(name, location){
 
 function allRatingsFromGoogleRating(data){
   var temp = {};
-  temp.name = data.name;
+  temp.name = data.name.replace("|","");
   temp.location = data.location;
   var google = data;
   delete google.location;
   // Foursquare
+  var foursquare = {};
   var fs_id = foursquareIDbyNameAndLocation(temp.name, temp.location);
   if(fs_id != ""){
     var fs_details = foursquareDetailsByID(fs_id);
@@ -570,17 +587,23 @@ function allRatingsFromGoogleRating(data){
   // Yelp
   Logger.log(temp.name);
   Logger.log(google.address);
-  if(google != "" && google.address != ""){
-    var yelp_id = yelpIDByNameAndAddress(temp.name, google.address);
-    var yelp = yelpRatingByID(yelp_id);
-    temp.yelp = yelp;
-    temp.address = google.address;
-    delete google.address;
-  }else if(foursquare != "" && foursquare.address != ""){
-    var yelp_id = yelpIDByNameAndAddress(temp.name, foursquare.address);
-    var yelp = yelpRatingByID(yelp_id);
-  }else{
-    var yelp = "";
+  var yelp = {};
+  var country = google.address.split(",").pop().trim();;
+  var cc = country_codes[country];
+  if(yelp_supported_countries.indexOf(cc) != -1){
+    if(google != "" && google.address != ""){
+      var yelp_id = yelpIDByNameAndAddress(temp.name, google.address);
+      if(yelp_id != "Unsupported country"){
+        var yelp = yelpRatingByID(yelp_id);
+      }
+      temp.address = google.address;
+      delete google.address;
+    }else if(foursquare != "" && foursquare.address != ""){
+      var yelp_id = yelpIDByNameAndAddress(temp.name, foursquare.address);
+      if(yelp_id != "Unsupported country"){
+        var yelp = yelpRatingByID(yelp_id);
+      }
+    }
   }
   temp.yelp = yelp;
   temp.google = google;
@@ -664,9 +687,12 @@ function reviewPlacesInSheet(){
   }
 }
 
-function addDiscoveriesToSheet(ratings, city){
+function addDiscoveriesToSheet(ratings, city, query){
   if(city == undefined){
     city = "";
+  }
+  if(query == undefined){
+    query = "none";
   }
   var sheet = SpreadsheetApp.getActiveSheet();
   var data = sheet.getDataRange().getValues();
@@ -685,6 +711,7 @@ function addDiscoveriesToSheet(ratings, city){
     row.push(r.foursquare.rating_count);
     row.push(r.yelp.rating);
     row.push(r.yelp.rating_count);
+    row.push(query);
     sheet.appendRow(row);
   }
 }
@@ -706,14 +733,27 @@ function discoverFood(city, state, query){
 
   var all_ratings = allFromGoogleForMultiple(google_ratings);
 
-  addDiscoveriesToSheet(all_ratings, city);
+  addDiscoveriesToSheet(all_ratings, city, query);
 }
 
 function testDiscover(){
-  //discoverFood("Oakland", "CA");
+  //discoverFood("Oakland", "CA", "chicken and waffles");
+  //discoverFood("Oakland", "CA", "mexican");
+  //discoverFood("Oakland", "CA", "indian");
+  //discoverFood("Oakland", "CA", "sushi");
   //discoverFood("San Diego", "CA", "");
   //discoverFood("Vancouver", "BC", "tacos");
-  discoverFood("Medellin", "ANT");
+  //discoverFood("Medellin", "CO", "chicken and waffles");
+  //discoverFood("Medellin", "CO", "mexican");
+  //discoverFood("Medellin", "CO", "indian");
+  //discoverFood("Medellin", "CO", "thai");
+  //discoverFood("Medellin", "CO", "sushi");
+  //discoverFood("Vancouver", "BC", "chicken and waffles");
+  //discoverFood("Vancouver", "BC", "mexican");
+  //discoverFood("Vancouver", "BC", "indian");
+  //discoverFood("Vancouver", "BC", "thai");
+  //discoverFood("Vancouver", "BC", "vegetarian");
+  discoverFood("Vancouver", "BC", "shakshuka");
 }
 
 
