@@ -11,12 +11,14 @@ state_codes["Antioquia"] = "ANT";
 var yelp_supported_countries = ["US","CA"];
 
 // *** APIs ***
+// Proxy URL for CORS avoidance
+const proxyurl = "https://cors-anywhere.herokuapp.com/";
 // Google Authentication
-var google_project_key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
+const google_project_key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
 // Foursquare Authentication and version
-var foursquareCredentials = "client_id=VGOXMO5JN5KMAEA30G1ZXZPZULAIPQ2MG3WS3NRHS2E52YYE&client_secret=HF4AHPPFI1BCFNEXNSZ1D1Q2ZDF1FCDCQGTFDBELRTTXCB0A&v=20190505&";
+const foursquareCredentials = "client_id=VGOXMO5JN5KMAEA30G1ZXZPZULAIPQ2MG3WS3NRHS2E52YYE&client_secret=HF4AHPPFI1BCFNEXNSZ1D1Q2ZDF1FCDCQGTFDBELRTTXCB0A&v=20190505&";
 // Yelp Authentication
-var yelp_key = "rBj-CkCKNRMa4bL-mogTgo90v05i1D2OnyWwMQDKA4tJd_hbXt3qgWpDPBtknQAVLBNOnaUCz58uiO6DXTow0aeZDeomeok1OXLA59dbebJknF86TyQoKw_ae4JhXXYx";
+const yelp_key = "rBj-CkCKNRMa4bL-mogTgo90v05i1D2OnyWwMQDKA4tJd_hbXt3qgWpDPBtknQAVLBNOnaUCz58uiO6DXTow0aeZDeomeok1OXLA59dbebJknF86TyQoKw_ae4JhXXYx";
 //==========================================================================================================================================
 // DIRECTIONS API
 // URI's
@@ -110,132 +112,145 @@ var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 
 // String String ---> {name:{rating:float, rating_count:int, price:int, id:str}} OR ""
 // Get atmosphere info for a place from google by its name and nearby lat long
-function googleRatingsByNameAndLocation(name, location){
-  var url = placeSearchRequest + "input=" + name + "&inputtype=textquery&locationbias=point:" + location;
-
+ function googleRatingsByNameAndLocation(name, location){
+  var url = proxyurl + placeSearchRequest + "input=" + name + "&inputtype=textquery&locationbias=point:" + location;
   // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var json = JSON.parse(response.getContentText());
-  var temp = {};
-  var details = json.candidates[0];
-
-  if(json.status != "ZERO_RESULTS"){
-    if(details.formatted_address != undefined){
-      temp.address = details.formatted_address;
+  const rating = fetch(url).then(response => {
+    return response.json();
+  }).then(data => {
+    var details = data.candidates[0];
+    //console.log(details);
+    var temp = {};
+    if(data.status != "ZERO_RESULTS"){
+      if(details.formatted_address != undefined){
+        temp.address = details.formatted_address;
+      }else{
+        temp.address = "";
+      }
+      if(details.rating != undefined){
+        temp.rating = details.rating;
+      }else{
+        temp.rating = "";
+      }
+      if(details.user_ratings_total != undefined){
+        temp.rating_count = details.user_ratings_total;
+      }else{
+        temp.rating_count = "";
+      }
+      if(details.place_id != undefined){
+        temp.id = details.place_id;
+      }else{
+        temp.id = "";
+      }
+      if(details.price_level != undefined){
+        temp.price = details.price_level;
+      }else{
+        temp.price = "";
+      }
     }else{
-      temp.address = "";
+      console.log("Google returned zero results!");
+      return "";
     }
-    if(details.rating != undefined){
-      temp.rating = details.rating;
-    }else{
-      temp.rating = "";
-    }
-    if(details.user_ratings_total != undefined){
-      temp.rating_count = details.user_ratings_total;
-    }else{
-      temp.rating_count = "";
-    }
-    if(details.place_id != undefined){
-      temp.id = details.place_id;
-    }else{
-      temp.id = "";
-    }
-    if(details.price_level != undefined){
-      temp.price = details.price_level;
-    }else{
-      temp.price = "";
-    }
-  }else{
-    Logger.log("Google returned zero results!");
-    return "";
-  }
-  return temp;
+    return temp;
+  }).catch(err => {
+    console.log("ERROR: " + err);
+  });
+  return rating;
 }
 
-function testGoogleRatingsByNameAndLocation(){
-  var test = googleRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814")
-  Logger.log(test);
+async function testGoogleRatingsByNameAndLocation(){
+  var test = await googleRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
+  //console.log(test);
   return test;
 }
 
+// String String ---> String
+// Get the Google place_id of a given City
 function googleIDByCityAndState(city, state){
-  var url = placeSearchRequest + "input=" + city + "," + state + "&inputtype=textquery";
+  var url = proxyurl + placeSearchRequest + "input=" + city + "," + state + "&inputtype=textquery";
 
   // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var json = JSON.parse(response.getContentText());
-
-  return json.candidates[0].place_id;
+  const response = fetch(url).then(response => {
+    return response.json()
+  }).then(data => {
+    return data.candidates[0].place_id;
+  }).catch(err => {
+    console.log("ERROR: " + err);
+  });
+  return response;
 }
 
-function testGoogleIDByCityAndState(){
-  var test1 = googleIDByCityAndState("Oakland", "CA");
-  var test2 = googleIDByCityAndState("San Diego", "CA");
-  var test3 = googleIDByCityAndState("New York", "NY");
+async function testGoogleIDByCityAndState(){
+  var test1 = await googleIDByCityAndState("Oakland", "CA");
+  var test2 = await googleIDByCityAndState("San Diego", "CA");
+  var test3 = await googleIDByCityAndState("New York", "NY");
 
-  Logger.log(test1);
-  Logger.log(test2);
-  Logger.log(test3);
+  //console.log(test1);
+  //console.log(test2);
+  //console.log(test3);
 
-  return test1
+  return test1;
 }
 
-
+// String ---> String
+// Get the lat,lng coordinates of a location by it's place_id
 function googleCoorsByID(id){
-  var url = placeDetailsRequest + id;
-
+  var url = proxyurl + placeDetailsRequest + id;
   // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var json = JSON.parse(response.getContentText());
-
-  var coors = json.result.geometry.location;
-  return coors.lat + "," + coors.lng;
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).then(data => {
+    var coors = data.result.geometry.location;
+    return coors.lat + "," + coors.lng;
+  }).catch(err => {
+    console.log("googleCoorsByID ERROR: " + err);
+  });
+  return response;
 }
 
-function testGoogleCoorsByID(){
-  var test = googleCoorsByID(testGoogleIDByCityAndState());
-  Logger.log(test);
+async function testGoogleCoorsByID(){
+  var test_ID = await testGoogleIDByCityAndState();
+  var test = await googleCoorsByID(test_ID);
+  console.log(test);
   return test;
 }
 
 // String ---> String
 // Take a google place ID and return the formatted address of the place
 function googleFormattedAddressByID(id){
-  var url = placeDetailsRequest + id + "&fields=formatted_address";
+  var url = proxyurl + placeDetailsRequest + id + "&fields=formatted_address";
 
   // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var json = JSON.parse(response.getContentText());
-  return json.result.formatted_address;
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).then(data => {
+    return data.result.formatted_address;
+  });
+  return response;
 }
 
-function testGoogleFormattedAddressByID(){
-  var info = testPlaceInfo();
-  //Logger.log(info);
-  var test = googleFormattedAddressByID(info[0].place_id);
-  //Logger.log(test);
+async function testGoogleFormattedAddressByID(){
+  var info = await testGoogleRatingsByNameAndLocation();
+  //console.log(info);
+  var test = await googleFormattedAddressByID(info.id);
+  //console.log(test);
   return test;
 }
-
 
 // Location String String ---> JSON
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
 function nearbySearch(coordinates,keywords,type){
-  var url = nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type+"&radius="+searchRadius;
+  var url = proxyurl + nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type+"&radius="+searchRadius;
 
   // API CALL
-  var response = JSON.parse(UrlFetchApp.fetch(url).getContentText());
+  var response = fetch(url).then(response => response.json());
 
   return response;
 }
 
-function testNearby(){
-  var test = nearbySearch("37.811410,-122.238268","pizza","restaurant");
-  //Logger.log(test);
+async function testNearby(){
+  var test = await nearbySearch("37.811410,-122.238268","pizza","restaurant");
+  //console.log(test.results);
   return test.results;
 }
 
@@ -251,11 +266,13 @@ function filterResultsByRating(results){
   return temp;
 }
 
-function googleRatingsAndAddressByNearbyResults(results){
+// Array ---> JSON
+// Return Google Ratings info and addresses from a list of Nearby Search Results
+async function googleRatingsAndAddressByNearbyResults(results){
   var temp = {};
   for(var i = 0; i < results.length; i++){
     var r = results[i];
-    var address = googleFormattedAddressByID(r.place_id);
+    var address = await googleFormattedAddressByID(r.place_id);
     temp[r.name] = {};
     if(address != undefined){
       temp[r.name].address = address;
@@ -292,36 +309,62 @@ function googleRatingsAndAddressByNearbyResults(results){
   return temp;
 }
 
-function testGoogleRatingsAndAddressByNearbyResults(){
-  var test = googleRatingsAndAddressByNearbyResults(testNearby());
-  Logger.log(test);
+async function testGoogleRatingsAndAddressByNearbyResults(){
+  var results = await testNearby();
+  var test = await googleRatingsAndAddressByNearbyResults(results);
+  //console.log(test);
   return test;
 }
 //======================================================================================================================
 // FOURSQUARE FUNCTIONS
 
+// String String ---> JSON
+// Get the Foursquare ratings of a venue from its name and location
+async function foursquareRatingByNameAndLocation(name, location){
+  var fs_rating = {};
+  // Get Foursquare ID of venue
+  var fs_id = await foursquareIDbyNameAndLocation(name, location);
+  // Was the ID found?
+  if(fs_id != ""){
+    // Foursquare API details request using Foursquare ID
+    var fs_details = await foursquareDetailsByID(fs_id);
+    // Were there details for the ID?
+    if(fs_details != ""){
+      // Parse Details Request result for just ratings info
+      fs_rating = foursquareRatingByDetails(fs_details);
+    }else{
+      console.log("FS Details not found");
+    }
+  }else{
+    console.log("FS_ID not found");
+  }
+  // Return ratings info, will be empty if ID or details were not found
+  return fs_rating;
+}
+
 // String String ---> String
 // Gets the Foursquare ID of a place from name and lat,lng
 function foursquareIDbyNameAndLocation(name, location){
-  var url = foursquareVenueSearch + "query=" + name + "&ll=" + location + "&intent=checkin";
-
+  var url = proxyurl + foursquareVenueSearch + "query=" + name + "&ll=" + location + "&intent=checkin";
   // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var fPlace = JSON.parse(response.getContentText());
-  if(fPlace.response.venues[0] != undefined){
-    return fPlace.response.venues[0].id;
-  }else{
-    return "";
-  }
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).then(data => {
+    if(data.response.venues[0] != undefined){
+      return data.response.venues[0].id;
+    }else{
+      return "";
+    }
+  }).catch(err => {
+    console.log("foursquareIDbyNameAndLocation ERROR: " + err);
+  });
+  return response;
 }
 
-function testFoursquareIDbyNameAndLocation(){
-  var test = testPlaceInfo()[0];
-  var name = test.name;
-  var location = test.location.lat + "," + test.location.lng;
-  var result = foursquareIDbyNameAndLocation(name, location);
-  return [result, test];
+async function testFoursquareIDbyNameAndLocation(){
+  var result = await foursquareIDbyNameAndLocation("The Star on Grand", "37.811527,-122.238814");
+  //console.log(result);
+  return result;
 }
 
 // String ---> JSON
@@ -330,20 +373,23 @@ function foursquareDetailsByID(id){
   var url = foursquareDetailsRequest.replace('XXIDXX',id);
 
   // API CALL
-  var response = UrlFetchApp.fetch(url);
-
-  var details = JSON.parse(response.getContentText());
-  if(details != undefined){
-    return details;
-  }else{
-    return "";
-  }
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).then(data =>{
+    if(data != undefined){
+      return data;
+    }else{
+      return "";
+    }
+  });
+  return response;
 }
 
-function testFoursquareDetailsByID(){
-  var id = testFoursquareIDbyNameAndLocation();
-  var test = foursquareDetailsByID(id[0]);
-  return [test, id[1]]
+async function testFoursquareDetailsByID(){
+  var id = await testFoursquareIDbyNameAndLocation();
+  var test = await foursquareDetailsByID(id);
+  //console.log(test);
+  return test;
 }
 
 // JSON ---> JSON
@@ -383,15 +429,40 @@ function foursquareRatingByDetails(details){
   return temp;
 }
 
-function testFoursquareRatingByDetails(){
-  var details = testDetails();
-  var result = foursquareRatingByDetails(details[0]);
-  Logger.log(details[1]);
-  Logger.log(result);
+async function testFoursquareRatingByDetails(){
+  var details = await testFoursquareDetailsByID();
+  var result = foursquareRatingByDetails(details);
+  //console.log(result);
   return result;
 }
 //======================================================================================================================
 // YELP FUNCTIONS
+
+// String String ---> JSON
+// Get the Yelp Rating info of a business from it's name and address
+async function yelpRatingsByNameAndAddress(name, address){
+  var yelp_rating = {};
+  // Get the Yelp ID of the business
+  var yelp_id = await yelpIDByNameAndAddress(name, address);
+  // Is the country Unsupported?
+  if(yelp_id == "Unsupported Country"){
+    console.log("Yelp does not support this Country");
+  // Did Yelp not find a business?
+  }else if(yelp_id == ""){
+    console.log("Yelp couldn't find a business here");
+  }else{
+    // Get and parse the Yelp ratings info using the business ID
+    var yelp_rating = await yelpRatingByID(yelp_id);
+  }
+  // Return the ratings info, empty if yelp couldn't find a business or the country is Unsupported
+  return yelp_rating;
+}
+
+async function testYelpRatingsByNameAndAddress(){
+  var test = await yelpRatingsByNameAndAddress("The Star", "3425 Grand Ave,Oaklanc,CA,US");
+  console.log(test);
+  return test;
+}
 
 // String ---> {street:str, city:str, state:str, country:str}
 // Take a formatted address and break it down into its components and return them in an object
@@ -429,6 +500,8 @@ function getAddressComponents(formatted){
   return temp;
 }
 
+// String ---> Boolean
+// Return true if string contains only numbers, hyphens, and whitespace
 function isOnlyNumber(address){
   var nums_and_syms = "0123456789- "
   for(var i = 0; i < address.length; i++){
@@ -442,7 +515,7 @@ function isOnlyNumber(address){
 // String String ---> JSON
 // Get yelp business details from a name and address and return the yelpID
 function yelpIDByNameAndAddress(name, address){
-  var url = yelpMatchRequest + "?";
+  var url = proxyurl + yelpMatchRequest + "?";
   var loc = getAddressComponents(address);
   if(yelp_supported_countries.indexOf(loc.country) != -1){
     url += "name=" + name;
@@ -450,28 +523,30 @@ function yelpIDByNameAndAddress(name, address){
     url += "&city=" + loc.city;
     url += "&state=" + loc.state;
     url += "&country=" + loc.country;
-    Logger.log(url)
     var authHeader = "Bearer " + yelp_key;
     var options = {headers: {Authorization: authHeader}}
 
     // API CALL
-    var response = UrlFetchApp.fetch(url, options);
-    var info = JSON.parse(response.getContentText());
-    if(info.businesses[0] != undefined){
-      return info.businesses[0].id;
-    }else{
-      return "";
-    }
+    var response = fetch(url, options).then(response => {
+      return response.json();
+    }).then(data => {
+      if(data.businesses[0] != undefined){
+        return data.businesses[0].id;
+      }else{
+        return "";
+      }
+    }).catch(err => {
+      console.log("yelpIDByNameAndAddress ERROR: " + err);
+    });
+    return response;
   }else{
     return "Unsupported country";
   }
 }
 
-function testYelpIDByNameAndAddress(){
-  var place = testPlaceInfo()[0];
-  var address = googleFormattedAddressByID(place.place_id);
-  var test = yelpIDByNameAndAddress(place.name, address);
-  Logger.log(test);
+async function testYelpIDByNameAndAddress(){
+  var test = await yelpIDByNameAndAddress("The Star", "3425 Grand Ave,Oaklanc,CA,US");
+  //console.log(test);
   return test;
 }
 
@@ -479,153 +554,155 @@ function testYelpIDByNameAndAddress(){
 // Return price and rating info from yelp by a yelp id
 function yelpRatingByID(id){
   // API URL
-  var url = yelpDetailsRequest + id;
+  var url = proxyurl + yelpDetailsRequest + id;
   var authHeader = "Bearer " + yelp_key;
   var options = {headers: {Authorization: authHeader}}
 
   // API CALL
-  var response = UrlFetchApp.fetch(url, options);
+  var response = fetch(url, options).then(response => {
+    return response.json();
+  }).then(data => {
+    var temp = {};
 
-  var info = JSON.parse(response.getContentText());
-  var temp = {};
+    if(data.name != undefined){
+      temp.name = data.name;
+    }else{
+      temp.name = "";
+    }
 
-  if(info.name != undefined){
-    temp.name = info.name;
-  }else{
-    temp.name = "";
-  }
+    if(data.price != undefined){
+      temp.price = data.price.length;
+    }else{
+      temp.price = "";
+    }
 
-  if(info.price != undefined){
-    temp.price = info.price.length;
-  }else{
-    temp.price = "";
-  }
-
-  if(info.rating != undefined){
-    temp.rating = info.rating;
-  }else{
-    temp.rating = "";
-  }
-
-  if(info.review_count != undefined){
-    temp.rating_count = info.review_count;
-  }else{
-    temp.rating_count = "";
-  }
-  temp.id = id;
-  return temp;
+    if(data.rating != undefined){
+      temp.rating = data.rating;
+    }else{
+      temp.rating = "";
+    }
+    if(data.review_count != undefined){
+      temp.rating_count = data.review_count;
+    }else{
+      temp.rating_count = "";
+    }
+    temp.id = id;
+    return temp;
+  }).catch(err => {
+    console.log("yelpRatingByID ERROR: " + err);
+  });
+  return response;
 }
 
-function testYelpRatingByID(){
-  var id = testYelpIDByNameAndAddress();
-  var test = yelpRatingByID(id);
-  Logger.log(test);
+async function testYelpRatingByID(){
+  var id = await testYelpIDByNameAndAddress();
+  var test = await yelpRatingByID(id);
+  console.log(test);
   return test;
 }
 //======================================================================================================================
 
+// String String String ---> JSON
+// Return all ratings info for a place given it's name, city, and state
+async function allRatingsByNameAndCityAndState(name, city, state){
+  var google_id = await googleIDByCityAndState(city,state);
+  var location = await googleCoorsByID(google_id);
+  var results = await allRatingsByNameAndLocation(name, location);
+  return results;
+}
+
+async function testAllRatingsByNameAndCityAndState(){
+  var results = await allRatingsByNameAndCityAndState("The Star", "Oakland", "CA");
+  //console.log(results);
+  return results;
+}
 
 // String String ---> JSON
 // Return ratings from Google, Foursquare, and Yelp given a name and location
-function allRatingsByNameAndLocation(name, location){
+async function allRatingsByNameAndLocation(name, location){
   var temp = {};
   temp.name = name;
   temp.location = location;
   // Google
-  var google = googleRatingsByNameAndLocation(name, location);
+  var google = await googleRatingsByNameAndLocation(name, location);
   // Foursquare
-  var foursquare = {};
-  var fs_id = foursquareIDbyNameAndLocation(name, location);
-  if(fs_id != ""){
-    var fs_details = foursquareDetailsByID(fs_id);
-    if(fs_details != ""){
-      var foursquare = foursquareRatingByDetails(fs_details);
-    }
-  }
+  var foursquare = await foursquareRatingByNameAndLocation(name, location);
   // Yelp
-  var yelp = {};
-  var country = google.address.split(",").pop().trim();
-  if(yelp_supported_countries.indexOf(country_codes[country]) != -1){
-    if(google != "" && google.address != ""){
-      var yelp_id = yelpIDByNameAndAddress(name, google.address);
-      if(yelp_id != "Unsupported country"){
-        var yelp = yelpRatingByID(yelp_id);
-      }
-      temp.address = google.address;
-      delete google.address;
-    }else if(foursquare != "" && foursquare.address != ""){
-      var yelp_id = yelpIDByNameAndAddress(name, foursquare.address);
-      if(yelp_id != "Unsupported country"){
-        var yelp = yelpRatingByID(yelp_id);
-      }
-    }else{
-      var yelp = "";
-    }
-  }
+  var yelp = await yelpRatingsByNameAndAddress(name, google.address);
+
   temp.yelp = yelp;
   temp.google = google;
   temp.foursquare = foursquare;
   return temp;
 }
 
+async function testAllRatingsByNameAndLocation(){
+  var test = await allRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
+  //console.log(test);
+  return test;
+}
 
-function allRatingsFromGoogleRating(data){
+// JSON ---> JSON
+async function allRatingsFromGoogleRating(data){
+  // Create empty object to hold ratings info
   var temp = {};
+  // Set name to data.name with problem characters removed
   temp.name = data.name.replace("|","");
   temp.location = data.location;
   var google = data;
   delete google.location;
   // Foursquare
   var foursquare = {};
-  var fs_id = foursquareIDbyNameAndLocation(temp.name, temp.location);
+  // Get foursquare ID
+  var fs_id = await foursquareIDbyNameAndLocation(temp.name, temp.location);
+  // Does ID exist?
   if(fs_id != ""){
-    var fs_details = foursquareDetailsByID(fs_id);
+    // Get venue details by FSID
+    var fs_details = await foursquareDetailsByID(fs_id);
+    // Was the venue found?
     if(fs_details != ""){
+      // Parse the details into rating info
       var foursquare = foursquareRatingByDetails(fs_details);
     }
   }
   // Yelp
-  Logger.log(temp.name);
-  Logger.log(google.address);
   var yelp = {};
-  var country = google.address.split(",").pop().trim();;
-  var cc = country_codes[country];
-  if(yelp_supported_countries.indexOf(cc) != -1){
-    if(google != "" && google.address != ""){
-      var yelp_id = yelpIDByNameAndAddress(temp.name, google.address);
-      if(yelp_id != "Unsupported country"){
-        var yelp = yelpRatingByID(yelp_id);
-      }
-      temp.address = google.address;
-      delete google.address;
-    }else if(foursquare != "" && foursquare.address != ""){
-      var yelp_id = yelpIDByNameAndAddress(temp.name, foursquare.address);
-      if(yelp_id != "Unsupported country"){
-        var yelp = yelpRatingByID(yelp_id);
-      }
-    }
+  var address = "";
+  // Does google have an address for the place?
+  if(google != "" && google.address != ""){
+    // Set the address to Google's registered address
+    var address = google.address;
+    temp.address = google.address;
+    delete google.address;
+  // If google has no address, does foursquare have an address?
+  }else if(foursquare != "" && foursquare.address != ""){
+    // Set the address to foursquare's address
+    var address = foursquare.address;
   }
+  // Find the yelp id by name and address
+  var yelp_id = await yelpIDByNameAndAddress(temp.name, address);
+  // Is the place in a supported country?
+  if(yelp_id != "Unsupported country"){
+    // Get its rating info from its ID
+    var yelp = await yelpRatingByID(yelp_id);
+  }
+  // Set master obj properties to respective ratings sources
   temp.yelp = yelp;
   temp.google = google;
   temp.foursquare = foursquare;
+  // Return master obj
   return temp;
 }
 
-function testAllRatingsFromGoogleRating(){
-  var results = testGoogleRatingsAndAddressByNearbyResults();
+async function testAllRatingsFromGoogleRating(){
+  var results = await testGoogleRatingsAndAddressByNearbyResults();
   var t_name = "";
   for(k in results){
     t_name = k;
     break;
   }
-  var test = allRatingsFromGoogleRating(results[t_name]);
-  Logger.log(test);
-  return test;
-}
-
-function testAllRatingsByNameAndLocation(){
-  var test = allRatingsByNameAndLocation("The Star on Grand", "37.811527,-122.238814");
-  //Logger.log(test);
+  var test = await allRatingsFromGoogleRating(results[t_name]);
+  console.log(test);
   return test;
 }
 
@@ -652,10 +729,10 @@ function aggregateRating(ratings, sources){
   return temp;
 }
 
-function testAggregateRating(){
-  var ratings = testAllRatingsByNameAndLocation();
+async function testAggregateRating(){
+  var ratings = await testAllRatingsByNameAndLocation();
   var score = aggregateRating(ratings);
-  Logger.log(ratings.name + ": " + score.rating +"/100 out of " + score.rating_count +" reviews");
+  console.log(ratings.name + ": " + score.rating +"/100 out of " + score.rating_count +" reviews");
   return score;
 }
 
@@ -716,24 +793,24 @@ function addDiscoveriesToSheet(ratings, city, query){
   }
 }
 
-function discoverFood(city, state, query){
+async function discoverFood(city, state, query){
   if(query == undefined){
     query = "";
   }
   // Get the place_id of the City
-  var google_id = googleIDByCityAndState(city, state);
+  var google_id = await googleIDByCityAndState(city, state);
 
   // Get the coordinates of the city from the place_id
   // API CALL
-  var coors = googleCoorsByID(google_id)  ;
+  var coors = await googleCoorsByID(google_id)  ;
 
-  var nearby = nearbySearch(coors, query, "restaurant").results;
+  var nearby = await nearbySearch(coors, query, "restaurant").results;
 
-  var google_ratings = googleRatingsAndAddressByNearbyResults(nearby);
+  var google_ratings = await googleRatingsAndAddressByNearbyResults(nearby);
 
-  var all_ratings = allFromGoogleForMultiple(google_ratings);
+  var all_ratings = await allFromGoogleForMultiple(google_ratings);
 
-  addDiscoveriesToSheet(all_ratings, city, query);
+  //addDiscoveriesToSheet(all_ratings, city, query);
 }
 
 function testDiscover(){
@@ -753,14 +830,27 @@ function testDiscover(){
   //discoverFood("Vancouver", "BC", "indian");
   //discoverFood("Vancouver", "BC", "thai");
   //discoverFood("Vancouver", "BC", "vegetarian");
-  discoverFood("Vancouver", "BC", "shakshuka");
+  //discoverFood("Vancouver", "BC", "shakshuka");
 }
 
-
-function allFromGoogleForMultiple(ratings){
+async function allFromGoogleForMultiple(ratings){
   var temp = {};
   for(var k in ratings){
-    temp[k] = allRatingsFromGoogleRating(ratings[k]);
+    temp[k] = await allRatingsFromGoogleRating(ratings[k]);
   }
   return temp;
+}
+
+//======================================================================================================================
+// Webpage Functions
+
+async function getRatings()
+{
+  var restaurant_name = $("#inputRestaurant").val().trim();
+  var city = $("#inputCity").val().trim();
+  var state = $("#inputState").val().trim();
+  var ratings = await allRatingsByNameAndCityAndState(restaurant_name, city, state);
+  var agg_rating = aggregateRating(ratings);
+  console.log(ratings);
+  console.log(agg_rating);
 }

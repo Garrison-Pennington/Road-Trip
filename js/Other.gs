@@ -10,28 +10,6 @@ function getInfoForAllPlaces(places){
   return dict;
 }
 
-// JSON ---> {Name: {Ratings:float,User_ratings_total: int, price_level: int, place_id: String}}
-function getPlaceInfo(place){
-  var temp = {};
-  temp.rating = (place.rating);
-  temp.user_ratings_total = (place.user_ratings_total);
-  temp.price_level = (place.price_level);
-  temp.place_id = (place.place_id);
-  temp.location = (place.geometry.location);
-  temp.name = place.name;
-  return temp;
-  }
-
-
-function testPlaceInfo(){
-  var test = [];
-  var nearby = testNearby();
-  test.push(getPlaceInfo(nearby[0]));
-  test.push(getPlaceInfo(nearby[1]));
-  test.push(getPlaceInfo(nearby[2]));
-  return test;
-}
-
 //Location Location ---> Route(JSON)
 //Take two locations, A,B, and find the route from A to B
 function getABRoute(start,end) {
