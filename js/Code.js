@@ -67,6 +67,41 @@ Opennow: True/False
 Type: Supported type, see https://developers.google.com/places/web-service/supported_types
 */
 
+// Nearby Search Returns
+/* JSON
+  {
+    html_attributions : [],       JSON.html_attributions
+    next_page_token: string       JSON.next_page_token
+    results: [],                  JSON.results
+      results[i]: {               JSON.results[i]
+        geometry: {               JSON.results[i].geometry
+          location: {             JSON.results[i].geometry.location
+            lat: double,          JSON.results[i].geometry.location.lat
+            lng: double           JSON.results[i].geometry.location.lng
+          } CLOSE location
+        }, CLOSE geometry
+        icon : string(url for .png),  JSON.results[i].icon
+        id: string,                   JSON.results[i].id
+        name: string,                 JSON.results[i].name
+        opening_hours: {              JSON.results[i].opening_hours
+          open_now: boolean           JSON.results[i].opening_hours.open_now
+        }, CLOSE opening_hours
+        photos : []                   JSON.results[i].photos
+          photos[i]: {                JSON.results[i].photos[i]
+            height: int,              JSON.results[i].photos[i].height
+            html_attributions: [],    JSON.results[i].photos[i].html_attributions
+            photo_reference: string,  JSON.results[i].photos[i].photo_reference
+            width: int                JSON.results[i].photos[i].width
+          } CLOSE photos[i]
+        place_id: string,         JSON.results[i].place_id
+        reference: string,        JSON.results[i].reference
+        types: []                 JSON.results[i].types
+          types[i]: string        JSON.results[i].types[i]
+        vicinity: string          JSON.results[i].vicinity
+      } CLOSE results[i]
+  } CLOSE JSON
+*/
+
 // Details request for address
 const placeDetailsRequest = "https://maps.googleapis.com/maps/api/place/details/json?key=" + google_project_key + "&placeid=";
 /* Required Parameters:
