@@ -110,10 +110,25 @@
     <button id="search-button" class="btn btn-primary">Search</button>
     <script>
     document.getElementById("search-button").addEventListener("click", function(){
-      getRatings();
+      searchAndDisplay();
     });
     </script>
     <div class="accordion" id="accordionExample">
+      <div class="card">
+        <div class="card-header" id="headingZero">
+          <h2 class="mb-0">
+            <button id="searchResultOne" class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseZero" aria-expanded="false" aria-controls="collapseZero">
+              Search Result 0
+            </button>
+          </h2>
+        </div>
+
+        <div id="collapseZero" class="collapse" aria-labelledby="headingZero" data-parent="#accordionExample">
+          <div class="card-body">
+            Search Result 0 Details
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-header" id="headingOne">
           <h2 class="mb-0">
