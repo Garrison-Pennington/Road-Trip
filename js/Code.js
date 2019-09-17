@@ -1,13 +1,15 @@
 var searchRadius = 11000;
 var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
-var country_codes = {};
-country_codes["United States"] = "US";
-country_codes["USA"] = "US";
-country_codes["Canada"] = "CA";
-country_codes["Colombia"] = "CO";
-var state_codes = {};
-state_codes["Antioquia"] = "ANT";
+var country_codes = {
+  'United States': "US",
+  'USA': "US",
+  'Canada': "CA",
+  'Colombia': "CO"
+};
+var state_codes = {
+  'Antioquia': "ANT"
+};
 var yelp_supported_countries = ["US","CA"];
 
 // *** APIs ***
@@ -23,7 +25,7 @@ const yelp_key = "rBj-CkCKNRMa4bL-mogTgo90v05i1D2OnyWwMQDKA4tJd_hbXt3qgWpDPBtknQ
 // DIRECTIONS API
 // URI's
 // Directions Request
-var directionsRequest = "https://maps.googleapis.com/maps/api/directions/json?key="+google_project_key+"&";// + Parameters
+const directionsRequest = "https://maps.googleapis.com/maps/api/directions/json?key="+google_project_key+"&";// + Parameters
 /* Required Parameters
 Origin: One of three
 - Address EX: 24+Sussex+Drive+Ottawa+ON
@@ -47,11 +49,11 @@ Waypoints: Array of
 */
 
 //Snap to Road
-var snapRequest = "https://roads.googleapis.com/v1/snapToRoads?key=" + google_project_key +"&path="; // + Points  lat,lng|lat,lng
+const snapRequest = "https://roads.googleapis.com/v1/snapToRoads?key=" + google_project_key +"&path="; // + Points  lat,lng|lat,lng
 //==========================================================================================================================================
 // PLACES API
 // Nearby Search
-var nearbyRequest = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key="+google_project_key+"&radius=" +searchRadius +"&";// + Parameters
+const nearbyRequest = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key="+google_project_key+"&radius=" +searchRadius +"&";// + Parameters
 /* Required Parameters
 Location:
  - Latitude,Longitude
@@ -66,7 +68,7 @@ Type: Supported type, see https://developers.google.com/places/web-service/suppo
 */
 
 // Details request for address
-var placeDetailsRequest = "https://maps.googleapis.com/maps/api/place/details/json?key=" + google_project_key + "&placeid=";
+const placeDetailsRequest = "https://maps.googleapis.com/maps/api/place/details/json?key=" + google_project_key + "&placeid=";
 /* Required Parameters:
  - key: Applications API key, already included in variable
  - placeid: Google's unique identifier for a place, parameter already declared, just add the id to the end of the string for a useable URL
@@ -76,7 +78,7 @@ var placeDetailsRequest = "https://maps.googleapis.com/maps/api/place/details/js
 */
 
 // Place Search request
-var placeSearchRequest = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?key=" + google_project_key + "&fields=formatted_address,place_id,rating,price_level,user_ratings_total,name&";
+const placeSearchRequest = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?key=" + google_project_key + "&fields=formatted_address,place_id,rating,price_level,user_ratings_total,name&";
 /* Required Parameters:
   - key: API key, already included in var
   - input: name, address, phone number etc. to search for
@@ -93,18 +95,18 @@ var placeSearchRequest = "https://maps.googleapis.com/maps/api/place/findplacefr
 // FOURSQUARE API
 // URI's
 // Foursquare Venue Details Request
-var foursquareDetailsRequest = "https://api.foursquare.com/v2/venues/XXIDXX?" + foursquareCredentials;
+const foursquareDetailsRequest = "https://api.foursquare.com/v2/venues/XXIDXX?" + foursquareCredentials;
 
 // Foursquare Venue Search Search Request
-var foursquareVenueSearch = "https://api.foursquare.com/v2/venues/search?" + foursquareCredentials;
+const foursquareVenueSearch = "https://api.foursquare.com/v2/venues/search?" + foursquareCredentials;
 
 //==========================================================================================================================================
 // YELP API
 // Match Request
-var yelpMatchRequest = "https://api.yelp.com/v3/businesses/matches";
+const yelpMatchRequest = "https://api.yelp.com/v3/businesses/matches";
 
 // Details request
-var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
+const yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 //======================================================================================================================
 // FUNCTIONS
 //======================================================================================================================
@@ -112,7 +114,7 @@ var yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 
 // String String ---> {name:{rating:float, rating_count:int, price:int, id:str}} OR ""
 // Get atmosphere info for a place from google by its name and nearby lat long
- function googleRatingsByNameAndLocation(name, location){
+function googleRatingsByNameAndLocation(name, location){
   var url = proxyurl + placeSearchRequest + "input=" + name + "&inputtype=textquery&locationbias=point:" + location;
   // API CALL
   const rating = fetch(url).then(response => {
@@ -545,7 +547,7 @@ function yelpIDByNameAndAddress(name, address){
 }
 
 async function testYelpIDByNameAndAddress(){
-  var test = await yelpIDByNameAndAddress("The Star", "3425 Grand Ave,Oaklanc,CA,US");
+  var test = await yelpIDByNameAndAddress("The Star", "3425 Grand Ave,Oakland,CA,US");
   //console.log(test);
   return test;
 }
@@ -844,13 +846,31 @@ async function allFromGoogleForMultiple(ratings){
 //======================================================================================================================
 // Webpage Functions
 
-async function getRatings()
-{
+async function getRatings(){
   var restaurant_name = $("#inputRestaurant").val().trim();
   var city = $("#inputCity").val().trim();
   var state = $("#inputState").val().trim();
   var ratings = await allRatingsByNameAndCityAndState(restaurant_name, city, state);
   var agg_rating = aggregateRating(ratings);
+  // Get Doc Elements
+  var restaurant_name = document.getElementById("restaurantName");
+  var agg_bar = document.getElementById("aggregate-rating");
+  var google_bar = document.getElementById("google-rating");
+  var yelp_bar = document.getElementById("yelp-rating");
+  var foursquare_bar = document.getElementById("foursquare-rating");
+  // Set Name
+  restaurant_name.innerHTML = ratings.name;
+  // Set Bar sizes
+  agg_bar.style.width = agg_rating.rating + "%";
+  google_bar.style.width = ((ratings.google.rating/5)*100) + "%";
+  yelp_bar.style.width = ((ratings.yelp.rating/5)*100) + "%";
+  foursquare_bar.style.width = ((ratings.foursquare.rating/10)*100) + "%";
+  // Set Bar labels
+  agg_bar.innerHTML = agg_rating.rating + " / 100";
+  google_bar.innerHTML = ratings.google.rating + " / 5";
+  yelp_bar.innerHTML = ratings.yelp.rating + " / 5";
+  foursquare_bar.innerHTML = ratings.foursquare.rating + " / 10";
+  // Debug
   console.log(ratings);
   console.log(agg_rating);
 }
