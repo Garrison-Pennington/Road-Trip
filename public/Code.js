@@ -983,3 +983,16 @@ async function searchAndDisplay(){
   console.log("Displaying results");
   displayNearbyResults(ratings);
 }
+
+function testPost(){
+  $.ajax({
+    url: "http://localhost:8080/",
+    type: "POST",
+    success: function(result){
+      console.log(result);
+    },
+    error: function(error){
+      console.log("ERROR: " + error);
+    }
+  });
+}

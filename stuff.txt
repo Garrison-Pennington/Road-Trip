@@ -1,0 +1,3 @@
+CONNECT TO MYSQL VIA SHELL W/ 	mysql -uroot -p -h 35.247.93.85 \
+			    	--ssl-ca=server-ca.pem --ssl-cert=client-cert.pem \
+				--ssl-key=client-key.pem
