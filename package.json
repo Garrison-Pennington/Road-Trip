@@ -1,0 +1,27 @@
+{
+  "name": "food-app",
+  "version": "1.0.0",
+  "description": "Aggregates reviews for restaurants from multiple sources into one score",
+  "main": "app.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Garrison-Pennington/Road-Trip.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Garrison-Pennington/Road-Trip/issues"
+  },
+  "homepage": "https://github.com/Garrison-Pennington/Road-Trip#readme",
+  "dependencies": {
+    "connect": "^3.7.0",
+    "mysql": "^2.17.1",
+    "serve-static": "^1.14.1"
+  }
+}

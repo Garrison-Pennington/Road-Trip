@@ -312,7 +312,7 @@ async function googleRatingsByNearbyResults(results){
   for(var i = 0; i < results.length; i++){
     var r = results[i];
     temp[r.name] = {};
-    if(address != undefined){
+    if(r.address != undefined){
       temp[r.name].address = address;
     }else{
       temp[r.name].address = "";
@@ -554,6 +554,9 @@ function isOnlyNumber(address){
 // Get yelp business details from a name and address and return the yelpID
 function yelpIDByNameAndAddress(name, address){
   var url = proxyurl + yelpMatchRequest + "?";
+  if(address == undefined){
+    return "Unsupported country";
+  }
   var loc = getAddressComponents(address);
   if(yelp_supported_countries.indexOf(loc.country) != -1){
     url += "name=" + name;
@@ -681,6 +684,7 @@ async function testAllRatingsByNameAndLocation(){
 }
 
 // JSON ---> JSON
+// Get ratings from all sources for ONE VENUE using its Google Rating
 async function allRatingsFromGoogleRating(data){
   // Create empty object to hold ratings info
   var temp = {};
@@ -709,14 +713,17 @@ async function allRatingsFromGoogleRating(data){
   //Does foursquare have an address
   if(foursquare != "" && foursquare.address != ""){
     // Set the address to foursquare's address
-    var address = foursquare.address;
+    address = foursquare.address;
   }
-  // Find the yelp id by name and address
-  var yelp_id = await yelpIDByNameAndAddress(temp.name, address);
-  // Is the place in a supported country?
-  if(yelp_id != "Unsupported country"){
-    // Get its rating info from its ID
-    var yelp = await yelpRatingByID(yelp_id);
+  // Only search yelp if there's an address
+  if(address != ""){
+    // Find the yelp id by name and address
+    var yelp_id = await yelpIDByNameAndAddress(temp.name, address);
+    // Is the place in a supported country?
+    if(yelp_id != "Unsupported country"){
+      // Get its rating info from its ID
+      var yelp = await yelpRatingByID(yelp_id);
+    }
   }
   // Set master obj properties to respective ratings sources
   temp.yelp = yelp;
@@ -932,33 +939,47 @@ function getSearchInputs(){
 // Take nearby search results and display them on page in the collapsing cards
 function displayNearbyResults(ratings){
   var spelled_nums = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty"];
-  var keys = ratings.keys();
+  var keys = Object.keys(ratings);
+  console.log(keys)
   for(var i = 0; i < results_per_page; i++){
+    var entry = ratings[keys[i]];
     // Get Card Button element (always visible)
     var id_to_find = "searchResult" + spelled_nums[i];
+    console.log(`Displaying ${id_to_find}`);
     var card_cover = document.getElementById(id_to_find);
     // Get Card Body element (visible on click)
-    id_to_find = "collapse" + spelled_nums[i];
+    id_to_find = "collapseBody" + spelled_nums[i];
     var card_contents = document.getElementById(id_to_find);
     // Change button text to restaurant name
-    card_cover.innerHTML = ratings[key[i]].name;
+    var number = entry.aggregate.rating;
+    var rounded = Math.round( number * 10 ) / 10;
+    card_cover.innerHTML = rounded + " : " + entry.name;
+
   }
 }
 
 // String String String ---> JSON
 // Take a query, city, and state and return the results of a Nearby Search with Ratings for all sources attached
 async function searchInCity(query, city, state){
+  console.log(`Getting place_id of ${city}, ${state}`);
   var city_id = await googleIDByCityAndState(city, state);
+  console.log(`Getting coordinates of ${city}, ${state}`);
   var city_coors = await googleCoorsByID(city_id);
+  console.log(`Searching for ${query} in ${city}, ${state}`);
   var nearby_search = await nearbySearch(city_coors, query, "restaurant");
+  console.log(`Found ${query} in ${city}, ${state}, getting Google Ratings`);
   var google_ratings = await googleRatingsByNearbyResults(nearby_search.results);
-  var all_source_ratings = await allRatingsFromGoogleRating(google_ratings);
+  console.log(`Got Google Ratings, getting Yelp and Foursquare ratings`);
+  var all_source_ratings = await allFromGoogleForMultiple(google_ratings);
+  console.log(`Got all ratings, calculating aggregate scores`);
   var complete_ratings = aggregateRatingForAll(all_source_ratings);
   return complete_ratings;
 }
 
 async function searchAndDisplay(){
   var inputs = getSearchInputs();
+  alert("Running");
   var ratings = await searchInCity(inputs['query'],inputs['city'],inputs['state']);
+  console.log("Displaying results");
   displayNearbyResults(ratings);
 }
