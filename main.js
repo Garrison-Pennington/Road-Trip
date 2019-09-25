@@ -1,3 +1,6 @@
+const fetch = require('node-fetch');
+const fs = require('fs');
+
 var searchRadius = 11000;
 var waypointSpacing = searchRadius*1.25;
 var maxWaypointSpacing = waypointSpacing*1.25;
@@ -14,8 +17,6 @@ var yelp_supported_countries = ["US","CA"];
 const results_per_page = 8;
 
 // *** APIs ***
-// Proxy URL for CORS avoidance
-const proxyurl = "https://cors-anywhere.herokuapp.com/";
 // Google Authentication
 const google_project_key = "AIzaSyBnWnCJha6_cQE_PTzVBUpqsH5gzkbvUuE";
 // Foursquare Authentication and version
@@ -149,6 +150,79 @@ const yelpDetailsRequest = "https://api.yelp.com/v3/businesses/";
 //======================================================================================================================
 // GOOGLE FUNCTIONS
 
+// String String ---> String
+// Get the Google place_id of a given City
+function googleIDByCityAndState(city, state){
+  var url = proxyurl + placeSearchRequest + "input=" + city + "," + state + "&inputtype=textquery";
+
+  // API CALL
+  const response = fetch(url).then(response => {
+    return response.json()
+  }).then(data => {
+    return data.candidates[0].place_id;
+  }).catch(err => {
+    console.log("ERROR: " + err);
+  });
+  return response;
+}
+
+async function testGoogleIDByCityAndState(){
+  var test1 = await googleIDByCityAndState("Oakland", "CA");
+  var test2 = await googleIDByCityAndState("San Diego", "CA");
+  var test3 = await googleIDByCityAndState("New York", "NY");
+
+  //console.log(test1);
+  //console.log(test2);
+  //console.log(test3);
+
+  return test1;
+}
+
+// String ---> String
+// Get the lat,lng coordinates of a location by it's place_id
+function googleCoorsByID(id){
+  var url = proxyurl + placeDetailsRequest + id;
+  // API CALL
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).then(data => {
+    var coors = data.result.geometry.location;
+    return coors.lat + "," + coors.lng;
+  }).catch(err => {
+    console.log("googleCoorsByID ERROR: " + err);
+  });
+  return response;
+}
+
+async function testGoogleCoorsByID(){
+  var test_ID = await testGoogleIDByCityAndState();
+  var test = await googleCoorsByID(test_ID);
+  console.log(test);
+  return test;
+}
+
+// string ---> String
+// Take a google place ID and return the formatted address of the place
+function googleFormattedAddressByID(id){
+  var url = proxyurl + placeDetailsRequest + id + "&fields=formatted_address";
+
+  // API CALL
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).then(data => {
+    return data.result.formatted_address;
+  });
+  return response;
+}
+
+async function testGoogleFormattedAddressByID(){
+  var info = await testGoogleRatingsByNameAndLocation();
+  //console.log(info);
+  var test = await googleFormattedAddressByID(info.id);
+  //console.log(test);
+  return test;
+}
+
 // String String ---> {name:{rating:float, rating_count:int, price:int, id:str}} OR ""
 // Get atmosphere info for a place from google by its name and nearby lat long
 function googleRatingsByNameAndLocation(name, location){
@@ -203,106 +277,19 @@ async function testGoogleRatingsByNameAndLocation(){
   return test;
 }
 
-// String String ---> String
-// Get the Google place_id of a given City
-function googleIDByCityAndState(city, state){
-  var url = proxyurl + placeSearchRequest + "input=" + city + "," + state + "&inputtype=textquery";
-
-  // API CALL
-  const response = fetch(url).then(response => {
-    return response.json()
-  }).then(data => {
-    return data.candidates[0].place_id;
-  }).catch(err => {
-    console.log("ERROR: " + err);
-  });
-  return response;
-}
-
-async function testGoogleIDByCityAndState(){
-  var test1 = await googleIDByCityAndState("Oakland", "CA");
-  var test2 = await googleIDByCityAndState("San Diego", "CA");
-  var test3 = await googleIDByCityAndState("New York", "NY");
-
-  //console.log(test1);
-  //console.log(test2);
-  //console.log(test3);
-
-  return test1;
-}
-
-// String ---> String
-// Get the lat,lng coordinates of a location by it's place_id
-function googleCoorsByID(id){
-  var url = proxyurl + placeDetailsRequest + id;
-  // API CALL
-  var response = fetch(url).then(response => {
-    return response.json();
-  }).then(data => {
-    var coors = data.result.geometry.location;
-    return coors.lat + "," + coors.lng;
-  }).catch(err => {
-    console.log("googleCoorsByID ERROR: " + err);
-  });
-  return response;
-}
-
-async function testGoogleCoorsByID(){
-  var test_ID = await testGoogleIDByCityAndState();
-  var test = await googleCoorsByID(test_ID);
-  console.log(test);
-  return test;
-}
-
-// String ---> String
-// Take a google place ID and return the formatted address of the place
-function googleFormattedAddressByID(id){
-  var url = proxyurl + placeDetailsRequest + id + "&fields=formatted_address";
-
-  // API CALL
-  var response = fetch(url).then(response => {
-    return response.json();
-  }).then(data => {
-    return data.result.formatted_address;
-  });
-  return response;
-}
-
-async function testGoogleFormattedAddressByID(){
-  var info = await testGoogleRatingsByNameAndLocation();
-  //console.log(info);
-  var test = await googleFormattedAddressByID(info.id);
-  //console.log(test);
-  return test;
-}
-
 // Location String String ---> NearbySearchResult
 // Searches near given coordinates for places of a given type related to the keywords and returns all results
-function nearbySearch(coordinates,keywords,type){
-  var url = proxyurl + nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type+"&radius="+searchRadius;
-
+function googleNearbySearch(coordinates,keywords,type){
+  var url = nearbyRequest + "location="+coordinates+"&keyword="+keywords+"&type="+type+"&radius="+searchRadius;
   // API CALL
   var response = fetch(url).then(response => response.json());
-
   return response;
 }
 
-async function testNearby(){
-  var test = await nearbySearch("37.811410,-122.238268","pizza","restaurant");
+async function testGoogleNearby(){
+  var test = await googleNearbySearch("37.811410,-122.238268","pizza","restaurant");
   //console.log(test.results);
   return test.results;
-}
-
-// JSON ---> JSON
-// Filter out results with low ratings and review counts
-function filterResultsByRating(results){
-  var temp = {}
-  for(var r in results){
-    if(results[r].user_ratings_total > 10){
-      if(results[r].rating >= 4.5){
-        temp[r] = results[r];
-  }}}
-  return temp;
 }
 
 // Array ---> JSON
@@ -348,7 +335,7 @@ async function googleRatingsByNearbyResults(results){
 }
 
 async function testGoogleRatingsByNearbyResults(){
-  var results = await testNearby();
+  var results = await testGoogleNearby();
   var test = await googleRatingsByNearbyResults(results);
   //console.log(test);
   return test;
@@ -427,6 +414,62 @@ async function testFoursquareDetailsByID(){
   var id = await testFoursquareIDbyNameAndLocation();
   var test = await foursquareDetailsByID(id);
   //console.log(test);
+  return test;
+}
+
+function foursquareNearbySearch(query, location){
+  var url = `${foursquareVenueSearch}query=${query}&ll=${location}&radius=${searchRadius}&intent=browse`;
+
+  var response = fetch(url).then(response => {
+    return response.json();
+  }).catch(err => {
+    console.log("foursquareNearbySearch ERROR: " + err);
+  });
+
+  return response;
+}
+
+async function testFoursquareNearbySearch(){
+  var test = await foursquareNearbySearch("pizza", "37.811410,-122.238268");
+  // console.log(test);
+  // write to a new file named 2pac.txt
+  // fs.writeFile('foursquareNearbySearch.txt', JSON.stringify(test), (err) => {
+    // throws an error, you could also catch it here
+    // if (err) throw err;
+
+    // success case, the file was saved
+    // console.log('response saved!');
+  // });
+  return test;
+}
+
+exports.test = async function(){await testFoursquareRatingsByNearbyResults();}
+
+async function foursquareRatingsByNearbyResults(results){
+  var venues = results.response.venues;
+  var temp = {};
+  for(var index in venues){
+    var fs_id = venues[index].id;
+    var name = venues[index].name;
+    var ll = venues[index].location.lat + venues[index].location.lng;
+    var fs_details = await foursquareDetailsByID(fs_id);
+    var fs_ratings = foursquareRatingByDetails(fs_details);
+    temp[name] = {
+      id: fs_id,
+      address: fs_ratings.address,
+      location: ll,
+      rating: fs_ratings.rating,
+      rating_count: fs_ratings.rating_count,
+      price: fs_ratings.price,
+    };
+  }
+  return temp;
+}
+
+async function testFoursquareRatingsByNearbyResults(){
+  var inp = await testFoursquareNearbySearch();
+  var test = await foursquareRatingsByNearbyResults(inp);
+  console.log(test);
   return test;
 }
 
@@ -851,14 +894,34 @@ async function discoverFood(city, state, query){
   // Get the coordinates of the city from the place_id
   // API CALL
   var coors = await googleCoorsByID(google_id)  ;
+  // Area Searches
+  var google_results = await googleNearbySearch(coors, query, "restaurant").results;
+  var foursquare_results = await foursquareNearbySearch(query, coors);
+  var yelp_results;
+  // Parse Results
+  var google_ratings = await googleRatingsByNearbyResults(google_results);
+  var foursquare_ratings = await foursquareRatingsByNearbyResults(foursquare_results);
+  // var all_ratings = await allFromGoogleForMultiple(google_ratings);
 
-  var nearby = await nearbySearch(coors, query, "restaurant").results;
-
-  var google_ratings = await googleRatingsByNearbyResults(nearby);
-
-  var all_ratings = await allFromGoogleForMultiple(google_ratings);
-
+  // Merge parsed results and check for matches across sources
+  var unmerged = [google_ratings, foursquare_ratings];
+  var all_ratings = mergeRatings(unmerged);
   //addDiscoveriesToSheet(all_ratings, city, query);
+}
+
+function mergeRatings(ratings){
+  var merged = {};
+  var addresses = {};
+  var phone_numbers = {};
+  
+  for(var source_index in ratings){
+    var source = ratings[source_index];
+    for(var rest_name in source){
+      if(merged[rest_name]){
+        // Combine duplicate entries
+      }
+    }
+  }
 }
 
 function testDiscover(){
@@ -887,112 +950,4 @@ async function allFromGoogleForMultiple(ratings){
     temp[k] = await allRatingsFromGoogleRating(ratings[k]);
   }
   return temp;
-}
-
-//======================================================================================================================
-// Webpage Functions
-
-async function getRatings(){
-  var inputs = getSearchInputs();
-  var ratings = await allRatingsByNameAndCityAndState(inputs['query'], inputs['city'], inputs['state']);
-  var agg_rating = aggregateRating(ratings);
-  // Get Doc Elements
-  var restaurant_name = document.getElementById("restaurantName");
-  var agg_bar = document.getElementById("aggregate-rating");
-  var google_bar = document.getElementById("google-rating");
-  var yelp_bar = document.getElementById("yelp-rating");
-  var foursquare_bar = document.getElementById("foursquare-rating");
-  // Set Name
-  restaurant_name.innerHTML = ratings.name;
-  // Set Bar sizes
-  agg_bar.style.width = agg_rating.rating + "%";
-  google_bar.style.width = ((ratings.google.rating/5)*100) + "%";
-  yelp_bar.style.width = ((ratings.yelp.rating/5)*100) + "%";
-  foursquare_bar.style.width = ((ratings.foursquare.rating/10)*100) + "%";
-  // Set Bar labels
-  agg_bar.innerHTML = agg_rating.rating + " / 100";
-  google_bar.innerHTML = ratings.google.rating + " / 5";
-  yelp_bar.innerHTML = ratings.yelp.rating + " / 5";
-  foursquare_bar.innerHTML = ratings.foursquare.rating + " / 10";
-  // Debug
-  console.log(ratings);
-  console.log(agg_rating);
-}
-
-// void ---> JSON
-// return an object containing the strings from the document inputs
-function getSearchInputs(){
-  var query = $("#inputRestaurant").val().trim();
-  var city = $("#inputCity").val().trim();
-  var state = $("#inputState").val().trim();
-
-  var temp = {
-    'query': query,
-    'city': city,
-    'state': state
-  };
-
-  return temp;
-}
-
-// FullRatings ---> void
-// Take nearby search results and display them on page in the collapsing cards
-function displayNearbyResults(ratings){
-  var spelled_nums = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty"];
-  var keys = Object.keys(ratings);
-  console.log(keys)
-  for(var i = 0; i < results_per_page; i++){
-    var entry = ratings[keys[i]];
-    // Get Card Button element (always visible)
-    var id_to_find = "searchResult" + spelled_nums[i];
-    console.log(`Displaying ${id_to_find}`);
-    var card_cover = document.getElementById(id_to_find);
-    // Get Card Body element (visible on click)
-    id_to_find = "collapseBody" + spelled_nums[i];
-    var card_contents = document.getElementById(id_to_find);
-    // Change button text to restaurant name
-    var number = entry.aggregate.rating;
-    var rounded = Math.round( number * 10 ) / 10;
-    card_cover.innerHTML = rounded + " : " + entry.name;
-
-  }
-}
-
-// String String String ---> JSON
-// Take a query, city, and state and return the results of a Nearby Search with Ratings for all sources attached
-async function searchInCity(query, city, state){
-  console.log(`Getting place_id of ${city}, ${state}`);
-  var city_id = await googleIDByCityAndState(city, state);
-  console.log(`Getting coordinates of ${city}, ${state}`);
-  var city_coors = await googleCoorsByID(city_id);
-  console.log(`Searching for ${query} in ${city}, ${state}`);
-  var nearby_search = await nearbySearch(city_coors, query, "restaurant");
-  console.log(`Found ${query} in ${city}, ${state}, getting Google Ratings`);
-  var google_ratings = await googleRatingsByNearbyResults(nearby_search.results);
-  console.log(`Got Google Ratings, getting Yelp and Foursquare ratings`);
-  var all_source_ratings = await allFromGoogleForMultiple(google_ratings);
-  console.log(`Got all ratings, calculating aggregate scores`);
-  var complete_ratings = aggregateRatingForAll(all_source_ratings);
-  return complete_ratings;
-}
-
-async function searchAndDisplay(){
-  var inputs = getSearchInputs();
-  alert("Running");
-  var ratings = await searchInCity(inputs['query'],inputs['city'],inputs['state']);
-  console.log("Displaying results");
-  displayNearbyResults(ratings);
-}
-
-function testPost(){
-  $.ajax({
-    url: "http://localhost:8080/",
-    type: "POST",
-    success: function(result){
-      console.log(result);
-    },
-    error: function(error){
-      console.log("ERROR: " + error);
-    }
-  });
 }

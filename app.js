@@ -1,4 +1,5 @@
 
+const searcher = require('./main.js');
 const http = require('http');
 const fs = require('fs');
 const connect = require('connect');
@@ -8,10 +9,11 @@ const express    = require('express');
 const app = express();
 const port = 8080;
 
-app.get('/', (req, res) => res.send('Hello World!'));
+app.get('/', (req, res) => {
+  res.send(req.query)
+});
 app.post('/', (req, res) => {
   res.send('POST malone');
-  test();
 });
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 app.use(express.static('public'));
@@ -93,6 +95,8 @@ class SQLTable {
   insertIntoTable(data){
     var columns = "(";
     var values = "(";
+    var name = this.name;
+    var schema = this.schema;
     for(var key in data){
       columns += key + ",";
       if(typeof data[key] == "string"){
@@ -103,11 +107,11 @@ class SQLTable {
     }
     columns = columns.substring(0, columns.length - 1) + ")";
     values = values.substring(0, values.length - 1) + ")";
-    var query = `INSERT INTO ${this.name} ${columns} VALUES ${values};`;
+    var query = `INSERT INTO ${name} ${columns} VALUES ${values};`;
     // console.log(query);
     connection.query(query, function (error, results, fields) {
       if (error) throw error;
-      console.log(`Values ${values} inserted into table "${this.name}"`);
+      console.log(`Values ${values} inserted into table "${name}"`);
     });
   }
 
@@ -121,27 +125,21 @@ class SQLTable {
     FROM ${name}
     WHERE api_id = '${id}'
     LIMIT 1;`;
-    var row;
-    var found;
     connection.query(query, function (error, results, fields){
       if (error) throw error;
-      row = results[0];
-      found = (row ? true : false);
+      var row = results[0];
+      var found = (row ? true : false);
       console.log(`api_id "${id}" ${found ? "" : "NOT"} found`);
     });
-    return found;
   }
 }
 
-function test(){
+async function test(){
   connection.connect();
-  clearDB();
   var foursquare = new SQLTable("foursquare", source_table);
-  console.log(foursquare);
+  //console.log(foursquare);
   foursquare.createTable();
   foursquare.insertIntoTable(test_foursquare_entry);
-  console.log("Should be True: " + foursquare.hasEntry("test_id"));
-  console.log("Should be False: " + foursquare.hasEntry("test_fail_id"));
   // connection.query(`SELECT * FROM foursquare;`, function (error, results, fields) {
   //   if (error) throw error;
   //   console.log(results);
@@ -171,4 +169,6 @@ function alertHello(){
   alert("Hello World!");
 }
 // clearDB();
-test();
+// test();
+
+searcher.test();
